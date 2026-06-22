@@ -225,14 +225,11 @@ Cargo.lock
 *.gif
 *.raw
 *.webp
-*.png
 *.apng
 *.mng
 *.tiff
 *.tif
-*.svg
 *.svgz
-*.pdf
 *.xbm
 *.bmp
 *.dib
