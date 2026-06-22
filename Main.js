@@ -129,6 +129,13 @@ function setLang(l) {
   const AMP_MULT    = 1.65;    // wave amplitude multiplier at peak
   const HOLD_FRAMES = 220;     // frames to hold purple peak
 
+  // Scroll-hint elements — cached once for colour sync
+  const hintSpan = document.querySelector('.scroll-hint span');
+  const hintLine = document.querySelector('.scroll-line');
+  // Colour endpoints: cyan (normal) → lavender (surge)
+  const HINT_NORMAL = [0, 199, 255];
+  const HINT_SURGE  = [210, 170, 255];
+
   function lerp(a, b, t) { return a + (b - a) * t; }
   function easeInOut(t) { return t < .5 ? 2*t*t : -1+(4-2*t)*t; }
 
@@ -181,6 +188,17 @@ function setLang(l) {
       // idle — count down to next surge
       surge.next--;
       if (surge.next <= 0) surge.dir = 1;
+    }
+
+    // Sync scroll-hint colour with surge blend
+    if (hintSpan) {
+      const hr = Math.round(lerp(HINT_NORMAL[0], HINT_SURGE[0], e));
+      const hg = Math.round(lerp(HINT_NORMAL[1], HINT_SURGE[1], e));
+      const hb = Math.round(lerp(HINT_NORMAL[2], HINT_SURGE[2], e));
+      const hc = `rgb(${hr},${hg},${hb})`;
+      hintSpan.style.color = hc;
+      hintSpan.style.textShadow = `0 0 10px rgba(${hr},${hg},${hb},.5)`;
+      hintLine.style.background = `linear-gradient(to bottom, ${hc}, transparent)`;
     }
 
     t++;
