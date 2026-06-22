@@ -377,34 +377,32 @@ footer p { font-size: .7rem; color: var(--t3); }
    HERO PHOTO
 ───────────────────────────────────────────────────── */
 .hero-photo-wrap {
-  position: absolute; bottom: 0; left: 0; right: 0; z-index: 1;
-  width: clamp(220px, 34vw, 460px);
-  margin: 0 auto;
-  pointer-events: none; user-select: none;
+  position: absolute;
+  bottom: 0;
+  right: clamp(2vw, 8vw, 12vw);
+  z-index: 1;
+  width: clamp(200px, 28vw, 420px);
+  pointer-events: none;
+  user-select: none;
+  /* Bottom portion hidden inside waves, top dissolves into dark bg */
   -webkit-mask-image: linear-gradient(to top,
-    transparent 0%,
-    rgba(0,0,0,.55) 10%,
-    black 26%,
-    black 82%,
+    transparent  0%,
+    transparent  12%,
+    black        36%,
+    black        75%,
     transparent 100%);
   mask-image: linear-gradient(to top,
-    transparent 0%,
-    rgba(0,0,0,.55) 10%,
-    black 26%,
-    black 82%,
+    transparent  0%,
+    transparent  12%,
+    black        36%,
+    black        75%,
     transparent 100%);
 }
 .hero-photo {
-  width: 100%; display: block;
-  filter: saturate(0.6) brightness(0.8);
-}
-/* Tint overlay synced with surge blend via JS */
-.hero-photo-tint {
-  position: absolute; inset: 0; z-index: 1;
-  background: rgb(140, 40, 220);
-  mix-blend-mode: color;
-  opacity: 0;
-  pointer-events: none;
+  width: 100%;
+  display: block;
+  /* Greyscale so skin tones don't clash with purple/cyan palette */
+  filter: brightness(0.8) contrast(1.05);
 }
 
 /* ─────────────────────────────────────────────────────
@@ -423,9 +421,15 @@ footer p { font-size: .7rem; color: var(--t3); }
   .pub-viz { min-height: 200px; }
   .proj-grid { grid-template-columns: 1fr; }
   .nav-links { display: none; }
-  .hero-photo-wrap { width: clamp(170px, 52vw, 280px); opacity: .6; }
+  /* On tablet: photo smaller, hug right edge tighter */
+  .hero-photo-wrap { width: clamp(150px, 38vw, 280px); right: 1vw; }
 }
 @media (max-width: 480px) {
   footer { flex-direction: column; gap: .4rem; text-align: center; }
-  .hero-photo-wrap { width: clamp(140px, 58vw, 220px); opacity: .45; }
+  /* On mobile: photo narrow strip on right, very subtle — text stays readable */
+  .hero-photo-wrap {
+    width: clamp(110px, 32vw, 180px);
+    right: 0;
+    opacity: 0.35;
+  }
 }

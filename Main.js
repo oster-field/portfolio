@@ -136,8 +136,6 @@ function setLang(l) {
   const HINT_NORMAL = [0, 199, 255];
   const HINT_SURGE  = [210, 170, 255];
 
-  // Hero photo tint — cached once for surge colour sync
-  const photoTint = document.querySelector('.hero-photo-tint');
 
   function lerp(a, b, t) { return a + (b - a) * t; }
   function easeInOut(t) { return t < .5 ? 2*t*t : -1+(4-2*t)*t; }
@@ -204,8 +202,6 @@ function setLang(l) {
       hintLine.style.background = `linear-gradient(to bottom, ${hc}, transparent)`;
     }
 
-    // Sync hero photo tint with surge blend (purple wash during surge)
-    if (photoTint) photoTint.style.opacity = (e * 0.52).toString();
 
     t++;
     requestAnimationFrame(frame);
