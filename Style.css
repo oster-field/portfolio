@@ -438,3 +438,41 @@ footer p { font-size: .7rem; color: var(--t3); }
     opacity: 0.5;
   }
 }
+
+/* ─────────────────────────────────────────────────────
+   ART DIRECTION — PORTRAIT (phone & tablet vertical)
+   Completely different photo composition:
+   top edge = language switcher level (nav height)
+   bottom edge = midpoint between eyebrow and h1
+───────────────────────────────────────────────────── */
+@media (max-width: 900px) and (orientation: portrait) {
+  .hero-photo-wrap {
+    /* Anchor to top of hero, below nav */
+    top: 3.25rem;
+    bottom: auto;
+    /* Height = distance from nav to midpoint between eyebrow & h1.
+       Hero-body sits at ~50vh; eyebrow is ~3rem above h1.
+       Midpoint ≈ 50vh - 1.5rem from centre = ~46vh from top */
+    height: calc(46vh - 3.25rem);
+    /* Horizontal: right-aligned, fades inward */
+    right: 0;
+    width: auto;
+    opacity: 1;
+    /* Top: fade in gently from nav level; bottom: dissolve before eyebrow */
+    -webkit-mask-image: linear-gradient(to bottom,
+      transparent  0%,
+      black        12%,
+      black        72%,
+      transparent 100%);
+    mask-image: linear-gradient(to bottom,
+      transparent  0%,
+      black        12%,
+      black        72%,
+      transparent 100%);
+  }
+
+  .hero-photo {
+    height: 100%;
+    width: auto;
+  }
+}
