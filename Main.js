@@ -11,7 +11,11 @@ const T = {
     about_q_em:'Mathematics meets the ocean.',
     about_q_rest:' Researching extreme wave phenomena. Building systems that turn raw sensor data into insight.',
     about_body:"I'm a computational mathematician and data scientist based in Munich. For over three years I worked at the Institute of Applied Physics (Russian Academy of Sciences), developing data pipelines, building machine learning models, and publishing peer-reviewed research on ocean wave statistics in Springer journals. I hold an M.Sc. from the University of Passau and a B.Sc. from the Higher School of Economics.",
-    about_cv:'Download CV ↗︎',
+    about_cv:'View CV',
+    btn_diploma:'View diploma',
+    btn_ref:'View letter of recommendation',
+    lb_dl:'Download',
+    lb_close:'Close',
     s1:'Pipeline speedup<br>10 h → 15 min',
     s2:'ML model accuracy<br>Predictive risk assessment',
     s3:'Time-series<br>datapoints processed',
@@ -52,7 +56,11 @@ const T = {
     about_q_em:'Mathematik trifft auf den Ozean.',
     about_q_rest:' Forschung zu extremen Wellenereignissen. Entwicklung von Systemen, die Rohdaten in Erkenntnisse umwandeln.',
     about_body:'Ich bin Computational Mathematician und Data Scientist in München. Über drei Jahre arbeitete ich am Institut für Angewandte Physik der Russischen Akademie der Wissenschaften, wo ich Datenpipelines entwickelte, ML-Modelle baute und begutachtete Forschung zur Ozeanwellenstatistik in Springer-Zeitschriften veröffentlichte. M.Sc. Universität Passau, B.Sc. Higher School of Economics.',
-    about_cv:'Lebenslauf herunterladen ↗︎',
+    about_cv:'Lebenslauf ansehen',
+    btn_diploma:'Diplom ansehen',
+    btn_ref:'Empfehlungsschreiben ansehen',
+    lb_dl:'Herunterladen',
+    lb_close:'Schließen',
     s1:'Pipeline-Beschleunigung<br>10 h → 15 Min',
     s2:'ML-Modellgenauigkeit<br>Prädiktive Risikobewertung',
     s3:'Zeitreihen-<br>datenpunkte verarbeitet',
@@ -96,6 +104,56 @@ function setLang(l) {
   });
   document.documentElement.lang = l;
 }
+
+/* ═══════════════════════════════════════════════════
+   LIGHTBOX
+══════════════════════════════════════════════════════ */
+const LB_DOCS = {
+  cv: {
+    en: { type: 'CV / Résumé',       title: 'Curriculum Vitae — Andrei Tregubov', path: 'doc/cv_en.pdf' },
+    de: { type: 'Lebenslauf',        title: 'Lebenslauf — Andrei Tregubov',        path: 'doc/cv_de.pdf' },
+  },
+  msc: {
+    en: { type: 'Academic Diploma',  title: 'Master of Science · Computational Mathematics · University of Passau', path: 'doc/msc.pdf' },
+    de: { type: 'Akademisches Diplom', title: 'Master of Science · Computational Mathematics · Universität Passau', path: 'doc/msc.pdf' },
+  },
+  bsc: {
+    en: { type: 'Academic Diploma',  title: 'Bachelor of Science · Fundamental Mathematics · Higher School of Economics', path: 'doc/bsc.pdf' },
+    de: { type: 'Akademisches Diplom', title: 'Bachelor of Science · Fundamental Mathematics · Higher School of Economics', path: 'doc/bsc.pdf' },
+  },
+  ref: {
+    en: { type: 'Letter of Recommendation', title: 'Institute of Applied Physics · Russian Academy of Sciences', path: 'doc/IAP.pdf' },
+    de: { type: 'Empfehlungsschreiben',      title: 'Institut für Angewandte Physik · Russische Akademie der Wissenschaften', path: 'doc/IAP.pdf' },
+  },
+};
+
+function openLightbox(docKey) {
+  const meta = (LB_DOCS[docKey] || {})[lang] || (LB_DOCS[docKey] || {})['en'];
+  if (!meta) return;
+  document.getElementById('lb-type').textContent  = meta.type;
+  document.getElementById('lb-title').textContent = meta.title;
+  document.getElementById('lb-iframe').src        = meta.path + '#navpanes=0';
+  document.getElementById('lb-dl').href           = meta.path;
+  document.getElementById('lb-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  document.getElementById('lb-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  // Unload iframe after transition so it doesn't keep the PDF in memory
+  setTimeout(() => { document.getElementById('lb-iframe').src = ''; }, 300);
+}
+
+// Close on backdrop click
+document.getElementById('lb-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
+});
+
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLightbox();
+});
 
 /* ═══════════════════════════════════════════════════
    HERO WAVE CANVAS  —  periodic purple surge

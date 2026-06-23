@@ -87,10 +87,10 @@
       I'm a computational mathematician and data scientist based in Munich. For over three years I worked at the Institute of Applied Physics (Russian Academy of Sciences), developing data pipelines, building machine learning models, and publishing peer-reviewed research on ocean wave statistics in Springer journals. I hold an M.Sc. from the University of Passau and a B.Sc. from the Higher School of Economics.
     </p>
     <div class="about-links reveal d3">
-      <a href="https://linkedin.com/in/andrei-tregubov-rnd" target="_blank" rel="noopener" class="alink">LinkedIn ↗︎</a>
-      <a href="https://github.com/oster-field"              target="_blank" rel="noopener" class="alink">GitHub ↗︎</a>
-      <a href="https://orcid.org/0009-0009-5786-7135"       target="_blank" rel="noopener" class="alink">ORCID ↗︎</a>
-      <a href="doc/cv_en.pdf" class="alink" data-k="about_cv">Download CV ↗︎</a>
+      <a href="https://linkedin.com/in/andrei-tregubov-rnd" target="_blank" rel="noopener" class="btn-glass btn-glass--blue">LinkedIn ↗︎</a>
+      <a href="https://github.com/oster-field"              target="_blank" rel="noopener" class="btn-glass btn-glass--blue">GitHub ↗︎</a>
+      <a href="https://orcid.org/0009-0009-5786-7135"       target="_blank" rel="noopener" class="btn-glass btn-glass--blue">ORCID ↗︎</a>
+      <button class="btn-glass" data-k="about_cv" onclick="openLightbox('cv')">View CV</button>
     </div>
   </div>
 </section>
@@ -137,6 +137,9 @@
         <li><span data-k="eb4">Formulated and proved a novel mathematical theorem for probability estimation of rare events in complex stochastic time-series</span></li>
         <li><span data-k="eb5">Awarded a personal research grant · presented at <strong>19 international conferences</strong> · 2 peer-reviewed Springer publications (Scopus-indexed)</span></li>
       </ul>
+      <div class="exp-doc-row">
+        <button class="btn-glass" data-k="btn_ref" onclick="openLightbox('ref')">View letter of recommendation</button>
+      </div>
     </div>
   </div>
 </section>
@@ -243,6 +246,7 @@
         <p class="edu-deg"    data-k="e1d">M.Sc. in Computational Mathematics</p>
         <p class="edu-school" data-k="e1s">University of Passau · Passau, Germany</p>
         <p class="edu-meta"   data-k="e1m">Sep 2023 – Mar 2026 · GPA 1.8 (Good)</p>
+        <button class="btn-glass edu-doc-btn" data-k="btn_diploma" onclick="openLightbox('msc')">View diploma</button>
       </div>
     </div>
     <div class="edu-item reveal d3">
@@ -251,6 +255,7 @@
         <p class="edu-deg"    data-k="e2d">B.Sc. in Fundamental Mathematics</p>
         <p class="edu-school" data-k="e2s">Higher School of Economics · Moscow, Russia</p>
         <p class="edu-meta"   data-k="e2m">Sep 2019 – Jun 2023 · GPA 1.6 (Excellent)</p>
+        <button class="btn-glass edu-doc-btn" data-k="btn_diploma" onclick="openLightbox('bsc')">View diploma</button>
       </div>
     </div>
   </div>
@@ -280,6 +285,26 @@
   <p>© 2026 Andrei Tregubov</p>
   <p style="font-family:var(--mono);font-size:.65rem" data-k="footer_loc">Munich, Germany</p>
 </footer>
+
+<!-- LIGHTBOX -->
+<div id="lb-overlay" role="dialog" aria-modal="true" aria-labelledby="lb-title">
+  <div class="lb-modal">
+    <div class="lb-header">
+      <div class="lb-header-info">
+        <p class="lb-doc-type" id="lb-type"></p>
+        <p class="lb-doc-title" id="lb-title"></p>
+      </div>
+      <button class="lb-close-btn" onclick="closeLightbox()" aria-label="Close">&#x2715;</button>
+    </div>
+    <div class="lb-body">
+      <iframe id="lb-iframe" src="" title="Document viewer" loading="lazy"></iframe>
+    </div>
+    <div class="lb-footer">
+      <a class="btn-glass" id="lb-dl" href="" download data-k="lb_dl">Download</a>
+      <button class="btn-glass" onclick="closeLightbox()" data-k="lb_close">Close</button>
+    </div>
+  </div>
+</div>
 
 <script src="Main.js"></script>
 </body>
