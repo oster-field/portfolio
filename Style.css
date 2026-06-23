@@ -420,6 +420,29 @@ footer p { font-size: .7rem; color: var(--t3); }
   height: 220px;
   pointer-events: none;
   overflow: hidden;
+  /* Fade all four edges into background — no hard rectangular cutoff */
+  -webkit-mask-image: linear-gradient(to right,
+    transparent  0%,
+    black        18%,
+    black        82%,
+    transparent 100%),
+  linear-gradient(to bottom,
+    transparent  0%,
+    black        20%,
+    black        80%,
+    transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right,
+    transparent  0%,
+    black        18%,
+    black        82%,
+    transparent 100%),
+  linear-gradient(to bottom,
+    transparent  0%,
+    black        20%,
+    black        80%,
+    transparent 100%);
+  mask-composite: intersect;
 }
 .hand {
   position: absolute;
