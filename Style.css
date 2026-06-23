@@ -447,18 +447,23 @@ footer p { font-size: .7rem; color: var(--t3); }
 .hand {
   position: absolute;
   top: 0;
-  height: 100%; width: auto;
+  /* Each hand occupies exactly its own half — never overlaps */
+  width: 50%; height: 100%;
+  object-fit: cover;
+  object-position: center;
   opacity: 0;
   transition: transform 1.1s cubic-bezier(.4,0,.2,1),
               opacity   1.1s ease;
 }
 .hand-left {
   left: 0;
-  transform: translateX(-38%);   /* starts off-screen left */
+  object-position: right center;  /* show the hand side (right of image) */
+  transform: translateX(-40%);
 }
 .hand-right {
   right: 0;
-  transform: translateX(38%);    /* starts off-screen right */
+  object-position: left center;   /* show the hand side (left of image) */
+  transform: translateX(40%);
 }
 /* Triggered by IntersectionObserver — class added via JS */
 .handshake.shake-in .hand-left,
