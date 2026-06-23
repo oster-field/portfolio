@@ -380,23 +380,26 @@ footer p { font-size: .7rem; color: var(--t3); }
 ───────────────────────────────────────────────────── */
 .hero-photo-wrap {
   position: absolute;
-  bottom: 0;
+  /* Bottom edge lands at lowest wave trough: baseY=63vh + max amp ~112px ≈ 24vh from bottom */
+  bottom: 24vh;
   right: 5vw;
   z-index: 1;           /* above bg, BEHIND canvas (z-index 2) */
-  height: 80vh;         /* height-driven: scales with viewport, not width */
+  height: 76vh;
   width: auto;
   pointer-events: none;
   user-select: none;
-  /* Top fades into dark background */
+  /* Bottom fades into waves, top fades into dark sky */
   -webkit-mask-image: linear-gradient(to top,
     transparent  0%,
-    black        18%,
-    black        85%,
+    rgba(0,0,0,.3) 8%,
+    black        22%,
+    black        80%,
     transparent 100%);
   mask-image: linear-gradient(to top,
     transparent  0%,
-    black        18%,
-    black        85%,
+    rgba(0,0,0,.3) 8%,
+    black        22%,
+    black        80%,
     transparent 100%);
 }
 .hero-photo {
@@ -429,8 +432,9 @@ footer p { font-size: .7rem; color: var(--t3); }
   footer { flex-direction: column; gap: .4rem; text-align: center; }
   /* On mobile: photo narrow strip on right, very subtle — text stays readable */
   .hero-photo-wrap {
-    height: 50vh;
+    height: 52vh;
+    bottom: 20vh;
     right: 0;
-    opacity: 0.45;
+    opacity: 0.5;
   }
 }
