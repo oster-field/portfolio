@@ -130,6 +130,7 @@ function setLang(l) {
   const HOLD_FRAMES = 220;     // frames to hold purple peak
 
   // Scroll-hint elements — cached once for colour sync
+  const heroEl   = document.getElementById('hero');
   const hintSpan = document.querySelector('.scroll-hint span');
   const hintLine = document.querySelector('.scroll-line');
   // Colour endpoints: cyan (normal) → lavender (surge)
@@ -165,13 +166,14 @@ function setLang(l) {
   }
 
   function frame() {
-    // Background
     const e = easeInOut(surge.blend);
-    const bg = cx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,   blendColor(BG.s0[0], BG.s0[1], e));
-    bg.addColorStop(.45, blendColor(BG.s1[0], BG.s1[1], e));
-    bg.addColorStop(1,   blendColor(BG.s2[0], BG.s2[1], e));
-    cx.fillStyle = bg; cx.fillRect(0,0,W,H);
+    // Background lives in CSS on #hero — canvas is transparent
+    // We only update the CSS gradient so the photo beneath stays visible
+    const top  = blendColor(BG.s0[0], BG.s0[1], e);
+    const mid  = blendColor(BG.s1[0], BG.s1[1], e);
+    const bot  = blendColor(BG.s2[0], BG.s2[1], e);
+    heroEl.style.background = `linear-gradient(to bottom, ${top} 0%, ${mid} 45%, ${bot} 100%)`;
+    cx.clearRect(0,0,W,H);  // clear only — waves draw on transparent canvas
 
     BASE.forEach((l, i) => drawLayer(l, i, surge.blend));
 

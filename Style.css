@@ -82,11 +82,13 @@ body {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   overflow: hidden;
+  /* Initial background — JS updates this gradient every frame for surge animation */
+  background: linear-gradient(to bottom, #000000 0%, #000a18 45%, #001530 100%);
 }
 
-#wave-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#wave-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
 
-.hero-body { position: relative; z-index: 2; text-align: center; padding: 0 5vw; }
+.hero-body { position: relative; z-index: 3; text-align: center; padding: 0 5vw; }
 
 .hero-eyebrow {
   font-size: .72rem; font-weight: 400; letter-spacing: .2em;
@@ -135,7 +137,7 @@ body {
 .btn-outline:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.38); }
 
 .scroll-hint {
-  position: absolute; bottom: 2.25rem; left: 0; right: 0; z-index: 2;
+  position: absolute; bottom: 2.25rem; left: 0; right: 0; z-index: 3;
   display: flex; flex-direction: column; align-items: center; gap: .45rem;
   opacity: 0; animation: up .8s ease 1.5s forwards;
 }
@@ -379,30 +381,29 @@ footer p { font-size: .7rem; color: var(--t3); }
 .hero-photo-wrap {
   position: absolute;
   bottom: 0;
-  right: clamp(2vw, 8vw, 12vw);
-  z-index: 1;
-  width: clamp(200px, 28vw, 420px);
+  right: 5vw;
+  z-index: 1;           /* above bg, BEHIND canvas (z-index 2) */
+  height: 80vh;         /* height-driven: scales with viewport, not width */
+  width: auto;
   pointer-events: none;
   user-select: none;
-  /* Bottom portion hidden inside waves, top dissolves into dark bg */
+  /* Top fades into dark background */
   -webkit-mask-image: linear-gradient(to top,
     transparent  0%,
-    transparent  12%,
-    black        36%,
-    black        75%,
+    black        18%,
+    black        85%,
     transparent 100%);
   mask-image: linear-gradient(to top,
     transparent  0%,
-    transparent  12%,
-    black        36%,
-    black        75%,
+    black        18%,
+    black        85%,
     transparent 100%);
 }
 .hero-photo {
-  width: 100%;
+  height: 100%;
+  width: auto;
   display: block;
-  /* Greyscale so skin tones don't clash with purple/cyan palette */
-  filter: brightness(0.8) contrast(1.05);
+  filter: brightness(0.9) contrast(1.05);
 }
 
 /* ─────────────────────────────────────────────────────
@@ -421,15 +422,15 @@ footer p { font-size: .7rem; color: var(--t3); }
   .pub-viz { min-height: 200px; }
   .proj-grid { grid-template-columns: 1fr; }
   .nav-links { display: none; }
-  /* On tablet: photo smaller, hug right edge tighter */
-  .hero-photo-wrap { width: clamp(150px, 38vw, 280px); right: 1vw; }
+  /* On tablet: shorter */
+  .hero-photo-wrap { height: 65vh; right: 2vw; }
 }
 @media (max-width: 480px) {
   footer { flex-direction: column; gap: .4rem; text-align: center; }
   /* On mobile: photo narrow strip on right, very subtle — text stays readable */
   .hero-photo-wrap {
-    width: clamp(110px, 32vw, 180px);
+    height: 50vh;
     right: 0;
-    opacity: 0.35;
+    opacity: 0.45;
   }
 }
