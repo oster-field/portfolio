@@ -384,3 +384,24 @@ document.querySelectorAll('.counter').forEach(el => cntObs.observe(el));
 window.addEventListener('scroll', () => {
   document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 55);
 }, {passive:true});
+
+/* ═══════════════════════════════════════════════════
+   HANDSHAKE — scroll-triggered animation
+══════════════════════════════════════════════════════ */
+(function () {
+  const hs = document.querySelector('.handshake');
+  if (!hs) return;
+
+  const obs = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          hs.classList.add('shake-in');
+          obs.unobserve(hs); // fire once
+        }
+      });
+    },
+    { threshold: 0.35 }   // trigger when 35% of element is visible
+  );
+  obs.observe(hs);
+})();
