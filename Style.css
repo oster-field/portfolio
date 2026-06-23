@@ -78,7 +78,7 @@ body {
    HERO
 ───────────────────────────────────────────────────── */
 #hero {
-  position: relative; width: 100%; height: 100vh; min-height: 580px;
+  position: relative; width: 100%; height: 100vh; min-height: 36rem;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   overflow: hidden;
@@ -94,26 +94,38 @@ body {
   font-size: .72rem; font-weight: 400; letter-spacing: .2em;
   text-transform: uppercase; color: var(--cyan);
   margin-bottom: 1.4rem;
-  opacity: 0; transform: translateY(18px);
+  opacity: 0; transform: translateY(1.5em);
   animation: up .8s ease .25s forwards;
-  text-shadow: 0 1px 10px rgba(0,0,0,.95);
+  text-shadow:
+    0 0 0.4em rgba(0,0,0,.98),
+    0 0 1.2em rgba(0,0,0,.80),
+    0 0 2.5em rgba(0,0,0,.50);
 }
 .hero-name {
   font-family: var(--serif);
   font-size: clamp(3.2rem, 8.5vw, 7.5rem);
   font-weight: 300; letter-spacing: -.02em; line-height: 1;
   color: var(--t1); margin-bottom: .85rem;
-  opacity: 0; transform: translateY(28px);
+  opacity: 0; transform: translateY(0.35em);
   animation: up .9s ease .45s forwards;
-  text-shadow: 0 2px 18px rgba(0,0,0,.9), 0 0 50px rgba(0,0,0,.6);
+  text-shadow:
+    0 0 0.08em rgba(0,0,0,.95),
+    0 0 0.18em rgba(0,0,0,.85),
+    0 0 0.35em rgba(0,0,0,.75),
+    0 0 0.62em rgba(0,0,0,.55),
+    0 0 1.00em rgba(0,0,0,.30);
 }
 .hero-sub {
   font-size: clamp(.85rem, 1.8vw, 1.1rem);
   font-weight: 300; letter-spacing: .07em; color: var(--t2);
   margin-bottom: 2.5rem;
-  opacity: 0; transform: translateY(18px);
+  opacity: 0; transform: translateY(1.5em);
   animation: up .8s ease .75s forwards;
-  text-shadow: 0 1px 12px rgba(0,0,0,.95);
+  text-shadow:
+    0 0 0.4em rgba(0,0,0,.98),
+    0 0 1.0em rgba(0,0,0,.85),
+    0 0 2.0em rgba(0,0,0,.65),
+    0 0 3.7em rgba(0,0,0,.40);
 }
 .hero-btns {
   display: flex; align-items: center; justify-content: center; gap: .85rem;
@@ -149,7 +161,7 @@ body {
   color: var(--cyan); text-shadow: 0 0 10px rgba(0,199,255,.45);
 }
 .scroll-line {
-  width: 1px; height: 40px;
+  width: 1px; height: 2.5rem;
   background: linear-gradient(to bottom, var(--cyan), transparent);
   animation: pulse 2s ease infinite;
 }
@@ -172,7 +184,7 @@ section { padding: clamp(5rem,10vw,9rem) 5vw; }
   color: var(--t1); margin-bottom: 1.25rem;
 }
 
-.reveal { opacity: 0; transform: translateY(38px); transition: opacity .8s ease, transform .8s ease; }
+.reveal { opacity: 0; transform: translateY(2rem); transition: opacity .8s ease, transform .8s ease; }
 .reveal.in { opacity: 1; transform: translateY(0); }
 .d1 { transition-delay: .1s; }
 .d2 { transition-delay: .2s; }
@@ -275,7 +287,7 @@ section { padding: clamp(5rem,10vw,9rem) 5vw; }
   display: grid; grid-template-columns: 1fr 1fr;
   border: 1px solid rgba(255,255,255,.06);
   border-radius: 1.25rem; overflow: hidden;
-  background: var(--d2); min-height: 360px;
+  background: var(--d2); min-height: 22.5rem;
 }
 .pub-card.flip { direction: rtl; }
 .pub-card.flip > * { direction: ltr; }
@@ -420,7 +432,7 @@ footer p { font-size: .7rem; color: var(--t3); }
   position: absolute;
   left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 560px;   /* matches contact-wrap */
-  height: 220px;
+  height: 16vh;
   pointer-events: none;
   overflow: hidden;
   /* Fade all four edges into background — no hard rectangular cutoff */
@@ -488,7 +500,7 @@ footer p { font-size: .7rem; color: var(--t3); }
   .stats-grid { grid-template-columns: repeat(2,1fr); }
   .pub-card { grid-template-columns: 1fr; }
   .pub-card.flip { direction: ltr; }
-  .pub-viz { min-height: 200px; }
+  .pub-viz { min-height: 12.5rem; }
   .proj-grid { grid-template-columns: 1fr; }
   .nav-links { display: none; }
   /* On tablet: shorter */
