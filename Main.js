@@ -106,6 +106,30 @@ function setLang(l) {
 }
 
 /* ═══════════════════════════════════════════════════
+   MOBILE MENU
+══════════════════════════════════════════════════════ */
+function openMenu() {
+  document.getElementById('mob-menu').classList.add('open');
+  document.getElementById('ham-btn').classList.add('open');
+  document.getElementById('ham-btn').setAttribute('aria-expanded', 'true');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMenu() {
+  document.getElementById('mob-menu').classList.remove('open');
+  document.getElementById('ham-btn').classList.remove('open');
+  document.getElementById('ham-btn').setAttribute('aria-expanded', 'false');
+  // Only restore scroll if lightbox is also closed
+  if (!document.getElementById('lb-overlay').classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
+}
+
+function toggleMenu() {
+  document.getElementById('mob-menu').classList.contains('open') ? closeMenu() : openMenu();
+}
+
+/* ═══════════════════════════════════════════════════
    LIGHTBOX
 ══════════════════════════════════════════════════════ */
 const LB_DOCS = {
@@ -152,7 +176,7 @@ document.getElementById('lb-overlay').addEventListener('click', function(e) {
 
 // Close on Escape key
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'Escape') { closeLightbox(); closeMenu(); }
 });
 
 /* ═══════════════════════════════════════════════════
