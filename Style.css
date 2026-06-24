@@ -349,8 +349,7 @@ section { padding: clamp(5rem,10vw,9rem) 5vw; }
 /* ─────────────────────────────────────────────────────
    EDUCATION
 ───────────────────────────────────────────────────── */
-#education {
-  position: relative; overflow: hidden; background: var(--black); }
+#education { background: var(--black); }
 .edu-list { max-width: 660px; margin: 2.5rem auto 0; display: flex; flex-direction: column; gap: 0; }
 
 .edu-item { display: grid; grid-template-columns: 1rem 1fr; gap: 0 1.75rem; padding-bottom: 2.25rem; position: relative; }
@@ -604,6 +603,16 @@ footer p { font-size: .7rem; color: var(--t3); }
   border-color: rgba(0,113,227,.58);
   color: #fff;
 }
+.btn-glass--red {
+  background: rgba(200,30,50,.18);
+  border-color: rgba(220,50,70,.38);
+  color: #ff8a90;
+}
+.btn-glass--red:hover {
+  background: rgba(200,30,50,.32);
+  border-color: rgba(220,50,70,.65);
+  color: #ffb3b7;
+}
 
 .edu-doc-btn { margin-top: .75rem; }
 
@@ -620,7 +629,7 @@ footer p { font-size: .7rem; color: var(--t3); }
   background: rgba(0,0,0,.82);
   backdrop-filter: blur(10px) saturate(150%);
   -webkit-backdrop-filter: blur(10px) saturate(150%);
-  display: flex; align-items: center; justify-content: center; padding: 1.25rem;
+  display: flex; align-items: center; justify-content: center; padding: 2vh 2vw;
   opacity: 0; pointer-events: none;
   transition: opacity .28s ease;
 }
@@ -628,7 +637,9 @@ footer p { font-size: .7rem; color: var(--t3); }
 
 .lb-modal {
   background: var(--d1); border: 1px solid rgba(255,255,255,.1);
-  border-radius: 1.1rem; width: 100%; max-width: 960px; max-height: 92vh;
+  border-radius: 1.1rem;
+  /* Explicit dimensions in viewport units — works on all screen sizes */
+  width: 90vw; height: 90vh;
   display: flex; flex-direction: column; overflow: hidden;
   transform: translateY(1.4rem) scale(.97);
   transition: transform .3s cubic-bezier(.4,0,.2,1);
@@ -659,26 +670,27 @@ footer p { font-size: .7rem; color: var(--t3); }
 }
 .lb-close-btn:hover { background: rgba(255,255,255,.13); color: var(--t1); border-color: rgba(255,255,255,.24); }
 
-.lb-body { flex: 1; overflow: hidden; min-height: 0; position: relative; }
-#lb-iframe {
-  width: 100%; height: 100%; min-height: 56vh;
-  border: none; display: block; background: var(--d2);
+/* lb-body fills remaining modal space */
+.lb-body {
+  flex: 1 1 0;
+  min-height: 0; height: 0;  /* height:0 + flex:1 forces correct stretch */
+  display: flex; flex-direction: column;
+  background: #fff;
 }
 
-/* Mobile PDF fallback panel */
-.lb-mobile-msg {
-  display: none; /* shown by JS on iOS */
-  flex-direction: column; align-items: center; justify-content: center;
-  position: absolute; inset: 0;
-  padding: 2rem 1.5rem; gap: 1.5rem; text-align: center;
-  background: var(--d1);
+/* Native iframe viewer — browser handles zoom, scroll, pagination */
+#lb-iframe {
+  flex: 1 1 0;     /* 0 basis so flex calculates from available space */
+  min-height: 0;
+  width: 100%; height: 100%; border: none;
+  display: block;
+  background: #fff;
 }
-.lb-pdf-icon { opacity: .75; flex-shrink: 0; }
-.lb-mobile-hint {
-  font-size: .82rem; font-weight: 300; color: var(--t3);
-  line-height: 1.7; max-width: 22rem; font-family: var(--sans);
-}
-.lb-mobile-open-btn { font-size: .8rem; padding: .55rem 1.4rem; }
+
+/* iOS fallback — hidden by default, shown via JS on iOS Safari */
+#lb-iframe.hidden { display: none; }
+
+@keyframes lb-spin { to { transform: rotate(360deg); } }
 
 .lb-footer {
   padding: .85rem 1.5rem; flex-shrink: 0;
@@ -688,38 +700,42 @@ footer p { font-size: .7rem; color: var(--t3); }
 
 @media (max-width: 600px) {
   #lb-overlay { padding: 0; align-items: flex-end; }
-  .lb-modal {
-    max-height: 100dvh; height: 100dvh;
-    border-radius: 0; border-left: none; border-right: none;
-  }
+  .lb-modal { max-height: 100dvh; height: 100dvh; border-radius: 0; border-left: none; border-right: none; }
   .lb-header { padding: .9rem 1rem; }
   .lb-footer { padding: .7rem 1rem; }
-  #lb-iframe { min-height: 60vh; }
 }
-
-
-/* ─────────────────────────────────────────────────────
-   EDUCATION — SVG MATH BACKGROUND (parallax)
-───────────────────────────────────────────────────── */
-.edu-bg-math {
-  position: absolute; inset: 0;
-  /* repeat both axes — seamless infinite loop */
-  background: url('img/math.svg') 0 0 / 420px auto repeat;
-  opacity: .055;
-  filter: invert(1) sepia(1) saturate(2) hue-rotate(185deg);
-  pointer-events: none;
-  z-index: 0;
-  will-change: background-position;
-}
-
-/* Ensure edu section content sits above bg */
-#education .s-label,
-#education .s-title,
-#education .edu-list { position: relative; z-index: 1; }
 
 /* ─────────────────────────────────────────────────────
    KEYFRAMES
 ───────────────────────────────────────────────────── */
+
+/* ─────────────────────────────────────────────────────
+   ABOUT — FRACTAL CANVAS
+───────────────────────────────────────────────────── */
+#about { position: relative; }
+#fractal-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+}
+#about .about-wrap { position: relative; z-index: 1; }
+
+/* ─────────────────────────────────────────────────────
+   EDUCATION — SVG MATH BACKGROUND (scroll parallax)
+───────────────────────────────────────────────────── */
+#education { position: relative; overflow: hidden; }
+.edu-bg-math {
+  position: absolute; inset: 0;
+  background: url('img/math.svg') 0 0 / 420px auto repeat;
+  opacity: .055;
+  filter: invert(1) sepia(1) saturate(2) hue-rotate(185deg);
+  pointer-events: none; z-index: 0;
+  will-change: background-position;
+}
+#education .s-label,
+#education .s-title,
+#education .edu-list { position: relative; z-index: 1; }
+
 @keyframes up   { to { opacity: 1; transform: translateY(0); } }
 @keyframes pulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
 
@@ -758,11 +774,9 @@ footer p { font-size: .7rem; color: var(--t3); }
   .pub-info { padding: 1.75rem; }
 }
 
-/* Fix 6 — lightbox on very narrow phones: edge-to-edge, smaller iframe min-height */
+/* Fix 6 — lightbox on very narrow phones */
 @media (max-width: 380px) {
-  #lb-overlay { padding: .4rem; }
   .lb-doc-title { font-size: .95rem; }
-  #lb-iframe { min-height: 46vh; }
 }
 
 /* ─────────────────────────────────────────────────────

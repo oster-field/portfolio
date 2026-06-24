@@ -16,8 +16,7 @@ const T = {
     btn_ref:'View letter of recommendation',
     lb_dl:'Download',
     lb_close:'Close',
-    lb_open_hint:'For the best experience, open this document in full screen.',
-    lb_open:'Open ↗︎',
+    lb_loading:'Loading…',
     s1:'Pipeline speedup<br>10 h → 15 min',
     s2:'ML model accuracy<br>Predictive risk assessment',
     s3:'Time-series<br>datapoints processed',
@@ -63,8 +62,7 @@ const T = {
     btn_ref:'Empfehlungsschreiben ansehen',
     lb_dl:'Herunterladen',
     lb_close:'Schließen',
-    lb_open_hint:'Für die beste Ansicht das Dokument im Vollbild öffnen.',
-    lb_open:'Öffnen ↗︎',
+    lb_loading:'Wird geladen…',
     s1:'Pipeline-Beschleunigung<br>10 h → 15 Min',
     s2:'ML-Modellgenauigkeit<br>Prädiktive Risikobewertung',
     s3:'Zeitreihen-<br>datenpunkte verarbeitet',
@@ -155,6 +153,10 @@ const LB_DOCS = {
   },
 };
 
+/* ─── iOS Safari detection ─── */
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+
 function openLightbox(docKey) {
   const meta = (LB_DOCS[docKey] || {})[lang] || (LB_DOCS[docKey] || {})['en'];
   if (!meta) return;
@@ -163,23 +165,16 @@ function openLightbox(docKey) {
   document.getElementById('lb-title').textContent = meta.title;
   document.getElementById('lb-dl').href           = meta.path;
 
-  const iframe     = document.getElementById('lb-iframe');
-  const mobileMsg  = document.getElementById('lb-mobile-msg');
-
-  // iOS Safari ignores #zoom / #view PDF parameters — use native PDF reader instead
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-  if (isIOS) {
-    iframe.src              = '';
-    iframe.style.display    = 'none';
-    mobileMsg.style.display = 'flex';
-    document.getElementById('lb-mobile-open').href = meta.path;
-  } else {
-    iframe.style.display    = 'block';
-    mobileMsg.style.display = 'none';
-    // view=FitH fits page to container width; works on desktop Chrome/Firefox/Edge + Android
-    iframe.src = meta.path + '#navpanes=0&view=FitH';
-  }
+  const iframe = document.getElementById('lb-iframe');
+  // PDF URL fragment params:
+  //   navpanes=0  — hide sidebar/thumbnails on all platforms
+  //   view=FitH   — fit page width on load (important for iOS initial scale)
+  //   toolbar=0   — hide redundant toolbar on iOS (Safari has its own controls)
+  const src = isIOS
+    ? meta.path + '#toolbar=0&navpanes=0&view=FitH'
+    : meta.path + '#navpanes=0&view=FitH';
+  iframe.src = '';
+  requestAnimationFrame(() => { iframe.src = src; });
 
   document.getElementById('lb-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -188,8 +183,9 @@ function openLightbox(docKey) {
 function closeLightbox() {
   document.getElementById('lb-overlay').classList.remove('open');
   document.body.style.overflow = '';
-  // Unload iframe after transition so it doesn't keep the PDF in memory
-  setTimeout(() => { document.getElementById('lb-iframe').src = ''; }, 300);
+  setTimeout(() => {
+    document.getElementById('lb-iframe').src = '';
+  }, 300);
 }
 
 // Close on backdrop click
@@ -520,31 +516,116 @@ window.addEventListener('scroll', () => {
   );
   obs.observe(hs);
 })();
+/* ═══════════════════════════════════════════════════
+   ABOUT — FRACTAL TREE (scroll-driven, seeded RNG)
+══════════════════════════════════════════════════════ */
+(function () {
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  const rng = mulberry32(Date.now() | 0);
+
+  const canvas = document.getElementById('fractal-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  const MAX_DEPTH = 8;
+  let branchesL = [], branchesR = [];
+  let W = 0, H = 0, clipTop = 0, clipBot = 0, midY = 0;
+
+  function gen(x, y, angle, len, depth, arr) {
+    if (depth === 0 || len < 1.5) return;
+    const ex = x + Math.cos(angle) * len;
+    const ey = y + Math.sin(angle) * len;
+    arr.push({ x1: x, y1: y, x2: ex, y2: ey, depth });
+    const spread = 0.22 + rng() * 0.32;
+    const lf     = 0.58 + rng() * 0.16;
+    const bias   = (rng() - 0.5) * 0.12;
+    gen(ex, ey, angle - spread + bias, len * lf,        depth - 1, arr);
+    gen(ex, ey, angle + spread + bias, len * lf * 0.95, depth - 1, arr);
+  }
+
+  function init() {
+    const section = document.getElementById('about');
+    const quote   = document.querySelector('.about-quote');
+    if (!section || !quote) return;
+    W = canvas.width  = section.offsetWidth;
+    H = canvas.height = section.offsetHeight;
+    const sr = section.getBoundingClientRect();
+    const qr = quote.getBoundingClientRect();
+    clipTop = qr.top  - sr.top;
+    clipBot = qr.bottom - sr.top;
+    midY    = (clipTop + clipBot) / 2;
+    const initLen = W * 0.38;
+    branchesL = []; branchesR = [];
+    gen(0, midY,  0,       initLen, MAX_DEPTH, branchesL);
+    gen(W, midY,  Math.PI, initLen, MAX_DEPTH, branchesR);
+  }
+
+  function getProgress() {
+    const q = document.querySelector('.about-quote');
+    if (!q) return 0;
+    const r = q.getBoundingClientRect();
+    const vh = window.innerHeight;
+    return Math.max(0, Math.min(1, (vh * 0.9 - r.top) / (vh * 0.7)));
+  }
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function drawSide(branches, progress) {
+    const count = Math.floor(branches.length * progress);
+    for (let i = 0; i < count; i++) {
+      const b = branches[i];
+      const t = 1 - (b.depth - 1) / (MAX_DEPTH - 1);
+      const alpha = (1 - t * 0.65) * 0.28 * progress;
+      ctx.strokeStyle = `rgba(${Math.round(lerp(0,140,t))},${Math.round(lerp(199,130,t))},255,${alpha})`;
+      ctx.lineWidth   = Math.max(0.4, b.depth * 0.5);
+      ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
+    }
+  }
+
+  function draw(progress) {
+    ctx.clearRect(0, 0, W, H);
+    if (progress <= 0) return;
+    const e = progress < 0.5 ? 2*progress*progress : 1-Math.pow(-2*progress+2,2)/2;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, clipTop - 16, W, clipBot - clipTop + 32); ctx.clip();
+    ctx.lineCap = 'round';
+    drawSide(branchesL, e); drawSide(branchesR, e);
+    ctx.restore();
+  }
+
+  let lastP = -1, rafId = null;
+  function onScroll() {
+    const p = getProgress();
+    if (Math.abs(p - lastP) < 0.004) return;
+    lastP = p;
+    if (!rafId) rafId = requestAnimationFrame(() => { draw(lastP); rafId = null; });
+  }
+
+  window.addEventListener('load',   () => { init(); draw(getProgress()); });
+  window.addEventListener('resize', () => { init(); draw(getProgress()); });
+  window.addEventListener('scroll', onScroll, { passive: true });
+})();
 
 /* ═══════════════════════════════════════════════════
-   EDU MATH BACKGROUND — opposite-direction parallax
-   background-position moves counter to scroll,
-   CSS background-repeat handles seamless looping.
+   EDUCATION — math.svg parallax (opposite to scroll)
 ══════════════════════════════════════════════════════ */
 (function () {
   const bg = document.querySelector('.edu-bg-math');
   if (!bg) return;
-
-  const SPEED = 0.18;   // fraction of scroll distance (0–1)
-  let posX = 0, posY = 0;
-  let lastY = window.scrollY;
-  let ticking = false;
-
+  let posX = 0, posY = 0, lastY = window.scrollY, ticking = false;
   function update() {
-    const dy = window.scrollY - lastY;
-    lastY = window.scrollY;
-    // Move OPPOSITE to scroll direction
-    posX -= dy * SPEED * 0.6;   // slight horizontal drift
-    posY -= dy * SPEED;          // main counter-scroll axis
+    const dy = window.scrollY - lastY; lastY = window.scrollY;
+    posX -= dy * 0.11; posY -= dy * 0.18;
     bg.style.backgroundPosition = posX.toFixed(1) + 'px ' + posY.toFixed(1) + 'px';
     ticking = false;
   }
-
   window.addEventListener('scroll', () => {
     if (!ticking) { requestAnimationFrame(update); ticking = true; }
   }, { passive: true });

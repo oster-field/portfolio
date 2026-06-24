@@ -99,6 +99,7 @@
 
 <!-- ABOUT -->
 <section id="about">
+  <canvas id="fractal-canvas" aria-hidden="true"></canvas>
   <div class="about-wrap">
     <p class="s-label reveal" data-k="about_lbl">About</p>
     <p class="about-quote reveal d1">
@@ -259,11 +260,7 @@
 
 <!-- EDUCATION -->
 <section id="education">
-
-  <!-- Math SVG background -->
   <div class="edu-bg-math" aria-hidden="true"></div>
-
-
   <p class="s-label reveal"    data-k="edu_lbl">Education</p>
   <h2 class="s-title reveal d1" data-k="edu_ttl">Academic background</h2>
   <div class="edu-list">
@@ -291,7 +288,7 @@
 <!-- CONTACT -->
 <section id="contact">
   <div class="contact-wrap">
-    <!-- Handshake animation - two hands slide together on scroll -->
+    <!-- Handshake animation — two hands slide together on scroll -->
     <div class="handshake" aria-hidden="true">
       <img src="img/hand-left.png"  class="hand hand-left"  alt="">
       <img src="img/hand-right.png" class="hand hand-right" alt="">
@@ -324,20 +321,13 @@
       <button class="lb-close-btn" onclick="closeLightbox()" aria-label="Close">&#x2715;</button>
     </div>
     <div class="lb-body">
-      <iframe id="lb-iframe" src="" title="Document viewer" loading="lazy"></iframe>
-      <div class="lb-mobile-msg" id="lb-mobile-msg">
-        <svg class="lb-pdf-icon" width="44" height="52" viewBox="0 0 44 52" fill="none" aria-hidden="true">
-          <rect x=".75" y=".75" width="42.5" height="50.5" rx="4.25" stroke="rgba(255,255,255,.12)" stroke-width="1.5"/>
-          <path d="M12 32h20M12 38h13" stroke="rgba(255,255,255,.1)" stroke-width="1.5" stroke-linecap="round"/>
-          <text x="22" y="22" text-anchor="middle" fill="#00c7ff" font-size="9.5" font-family="JetBrains Mono,monospace" letter-spacing=".08em">PDF</text>
-        </svg>
-        <p class="lb-mobile-hint" data-k="lb_open_hint">For the best experience, open this document in full screen.</p>
-        <a class="btn-glass btn-glass--blue lb-mobile-open-btn" id="lb-mobile-open" href="" target="_blank" rel="noopener" data-k="lb_open">Open ↗︎</a>
-      </div>
+      <!-- Native browser PDF viewer — handles zoom, scroll, pages automatically -->
+      <iframe id="lb-iframe" title="Document viewer" allowfullscreen></iframe>
+
     </div>
     <div class="lb-footer">
-      <a class="btn-glass" id="lb-dl" href="" download data-k="lb_dl">Download</a>
-      <button class="btn-glass" onclick="closeLightbox()" data-k="lb_close">Close</button>
+      <a class="btn-glass btn-glass--blue" id="lb-dl" href="" download data-k="lb_dl">Download</a>
+      <button class="btn-glass btn-glass--red" onclick="closeLightbox()" data-k="lb_close">Close</button>
     </div>
   </div>
 </div>
