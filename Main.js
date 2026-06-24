@@ -520,3 +520,32 @@ window.addEventListener('scroll', () => {
   );
   obs.observe(hs);
 })();
+
+/* ═══════════════════════════════════════════════════
+   EDU MATH BACKGROUND — opposite-direction parallax
+   background-position moves counter to scroll,
+   CSS background-repeat handles seamless looping.
+══════════════════════════════════════════════════════ */
+(function () {
+  const bg = document.querySelector('.edu-bg-math');
+  if (!bg) return;
+
+  const SPEED = 0.18;   // fraction of scroll distance (0–1)
+  let posX = 0, posY = 0;
+  let lastY = window.scrollY;
+  let ticking = false;
+
+  function update() {
+    const dy = window.scrollY - lastY;
+    lastY = window.scrollY;
+    // Move OPPOSITE to scroll direction
+    posX -= dy * SPEED * 0.6;   // slight horizontal drift
+    posY -= dy * SPEED;          // main counter-scroll axis
+    bg.style.backgroundPosition = posX.toFixed(1) + 'px ' + posY.toFixed(1) + 'px';
+    ticking = false;
+  }
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) { requestAnimationFrame(update); ticking = true; }
+  }, { passive: true });
+})();

@@ -349,7 +349,8 @@ section { padding: clamp(5rem,10vw,9rem) 5vw; }
 /* ─────────────────────────────────────────────────────
    EDUCATION
 ───────────────────────────────────────────────────── */
-#education { background: var(--black); }
+#education {
+  position: relative; overflow: hidden; background: var(--black); }
 .edu-list { max-width: 660px; margin: 2.5rem auto 0; display: flex; flex-direction: column; gap: 0; }
 
 .edu-item { display: grid; grid-template-columns: 1rem 1fr; gap: 0 1.75rem; padding-bottom: 2.25rem; position: relative; }
@@ -695,6 +696,26 @@ footer p { font-size: .7rem; color: var(--t3); }
   .lb-footer { padding: .7rem 1rem; }
   #lb-iframe { min-height: 60vh; }
 }
+
+
+/* ─────────────────────────────────────────────────────
+   EDUCATION — SVG MATH BACKGROUND (parallax)
+───────────────────────────────────────────────────── */
+.edu-bg-math {
+  position: absolute; inset: 0;
+  /* repeat both axes — seamless infinite loop */
+  background: url('img/math.svg') 0 0 / 420px auto repeat;
+  opacity: .055;
+  filter: invert(1) sepia(1) saturate(2) hue-rotate(185deg);
+  pointer-events: none;
+  z-index: 0;
+  will-change: background-position;
+}
+
+/* Ensure edu section content sits above bg */
+#education .s-label,
+#education .s-title,
+#education .edu-list { position: relative; z-index: 1; }
 
 /* ─────────────────────────────────────────────────────
    KEYFRAMES
