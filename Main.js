@@ -16,6 +16,8 @@ const T = {
     btn_ref:'View letter of recommendation',
     lb_dl:'Download',
     lb_close:'Close',
+    lb_open_hint:'For the best experience, open this document in full screen.',
+    lb_open:'Open ↗︎',
     s1:'Pipeline speedup<br>10 h → 15 min',
     s2:'ML model accuracy<br>Predictive risk assessment',
     s3:'Time-series<br>datapoints processed',
@@ -61,6 +63,8 @@ const T = {
     btn_ref:'Empfehlungsschreiben ansehen',
     lb_dl:'Herunterladen',
     lb_close:'Schließen',
+    lb_open_hint:'Für die beste Ansicht das Dokument im Vollbild öffnen.',
+    lb_open:'Öffnen ↗︎',
     s1:'Pipeline-Beschleunigung<br>10 h → 15 Min',
     s2:'ML-Modellgenauigkeit<br>Prädiktive Risikobewertung',
     s3:'Zeitreihen-<br>datenpunkte verarbeitet',
@@ -154,10 +158,29 @@ const LB_DOCS = {
 function openLightbox(docKey) {
   const meta = (LB_DOCS[docKey] || {})[lang] || (LB_DOCS[docKey] || {})['en'];
   if (!meta) return;
+
   document.getElementById('lb-type').textContent  = meta.type;
   document.getElementById('lb-title').textContent = meta.title;
-  document.getElementById('lb-iframe').src        = meta.path + '#navpanes=0';
   document.getElementById('lb-dl').href           = meta.path;
+
+  const iframe     = document.getElementById('lb-iframe');
+  const mobileMsg  = document.getElementById('lb-mobile-msg');
+
+  // iOS Safari ignores #zoom / #view PDF parameters — use native PDF reader instead
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  if (isIOS) {
+    iframe.src              = '';
+    iframe.style.display    = 'none';
+    mobileMsg.style.display = 'flex';
+    document.getElementById('lb-mobile-open').href = meta.path;
+  } else {
+    iframe.style.display    = 'block';
+    mobileMsg.style.display = 'none';
+    // view=FitH fits page to container width; works on desktop Chrome/Firefox/Edge + Android
+    iframe.src = meta.path + '#navpanes=0&view=FitH';
+  }
+
   document.getElementById('lb-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
