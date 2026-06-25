@@ -135,22 +135,57 @@ body {
 
 .btn-solid {
   display: inline-flex; align-items: center; gap: .35rem;
-  padding: .65rem 1.4rem; background: var(--blue); color: #fff;
+  padding: .65rem 1.4rem;
+  background: linear-gradient(180deg, #2b8fff, var(--blue));
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.18);
   border-radius: 2rem; font-size: .78rem; font-weight: 500;
   letter-spacing: .02em; text-decoration: none;
-  transition: background .2s, transform .15s, box-shadow .2s;
+  box-shadow:
+    0 1px 1px rgba(255,255,255,.28) inset,
+    0 -1px 1px rgba(0,40,100,.3) inset,
+    0 8px 20px rgba(0,80,200,.32),
+    0 1px 2px rgba(0,0,0,.3);
+  transition: transform .2s ease, box-shadow .25s ease, background .25s ease;
 }
-.btn-solid:hover { background: #0077ed; transform: scale(1.02); box-shadow: 0 0 28px rgba(0,113,227,.38); }
+.btn-solid:hover {
+  background: linear-gradient(180deg, #3f9aff, #0077ed);
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 1px rgba(255,255,255,.36) inset,
+    0 -1px 1px rgba(0,40,100,.3) inset,
+    0 12px 28px rgba(0,90,220,.4),
+    0 2px 4px rgba(0,0,0,.3);
+}
+.btn-solid:active { transform: translateY(0); }
 
 .btn-outline {
   display: inline-flex; align-items: center; gap: .35rem;
   padding: .65rem 1.4rem;
+  background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.03));
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
   border: 1px solid rgba(255,255,255,.22); color: var(--t1);
-  border-radius: 2rem; font-size: .78rem; font-weight: 300;
+  border-radius: 2rem; font-size: .78rem; font-weight: 400;
   letter-spacing: .02em; text-decoration: none;
-  transition: background .2s, border-color .2s;
+  box-shadow:
+    0 1px 1px rgba(255,255,255,.13) inset,
+    0 -1px 1px rgba(0,0,0,.2) inset,
+    0 6px 16px rgba(0,0,0,.26),
+    0 1px 2px rgba(0,0,0,.3);
+  transition: transform .2s ease, box-shadow .25s ease, background .2s, border-color .2s;
 }
-.btn-outline:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.38); }
+.btn-outline:hover {
+  background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.05));
+  border-color: rgba(255,255,255,.4);
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 1px rgba(255,255,255,.18) inset,
+    0 -1px 1px rgba(0,0,0,.2) inset,
+    0 10px 22px rgba(0,0,0,.32),
+    0 2px 4px rgba(0,0,0,.3);
+}
+.btn-outline:active { transform: translateY(0); }
 
 .scroll-hint {
   position: absolute; bottom: 2.25rem; left: 0; right: 0; z-index: 3;
@@ -376,9 +411,48 @@ section { padding: clamp(5rem,10vw,9rem) 5vw; }
   transition: color .2s, border-color .2s;
 }
 .contact-email:hover { color: var(--cyan); border-color: var(--cyan); }
-.social-row { display: flex; align-items: center; justify-content: center; gap: 1.5rem; margin-top: 1.5rem; }
-.slink { font-size: .72rem; font-weight: 400; letter-spacing: .08em; text-transform: uppercase; color: var(--t2); text-decoration: none; transition: color .2s; }
-.slink:hover { color: var(--t1); }
+.social-row { display: flex; align-items: center; justify-content: center; gap: .9rem; margin-top: 1.5rem; flex-wrap: wrap; }
+
+.slink {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  width: 2.85rem; height: 2.85rem;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(0,199,255,.16), rgba(0,199,255,.05));
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(120,225,255,.24);
+  color: var(--t2);
+  text-decoration: none;
+  box-shadow:
+    0 1px 1px rgba(220,250,255,.14) inset,
+    0 -1px 1px rgba(0,40,55,.3) inset,
+    0 6px 14px rgba(0,100,140,.18),
+    0 1px 2px rgba(0,0,0,.3);
+  transition: transform .2s ease, box-shadow .25s ease, background .25s ease, border-color .25s ease, color .2s ease;
+}
+.slink svg { width: 1.15rem; height: 1.15rem; }
+.slink span {
+  position: absolute; top: -2.1rem; left: 50%; translate: -50% 0;
+  font-family: var(--mono); font-size: .62rem; letter-spacing: .04em;
+  color: var(--t2); white-space: nowrap;
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  transform: translateY(.2rem);
+}
+.slink:hover {
+  background: linear-gradient(180deg, rgba(0,199,255,.28), rgba(0,199,255,.1));
+  border-color: rgba(140,230,255,.45);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow:
+    0 1px 1px rgba(220,250,255,.2) inset,
+    0 -1px 1px rgba(0,40,55,.3) inset,
+    0 10px 22px rgba(0,130,170,.26),
+    0 2px 4px rgba(0,0,0,.3);
+}
+.slink:hover span { opacity: 1; transform: translateY(0); color: var(--t1); }
+.slink:active { transform: translateY(-1px); }
 
 /* ─────────────────────────────────────────────────────
    FOOTER
@@ -574,45 +648,99 @@ footer p { font-size: .7rem; color: var(--t3); }
 }
 
 /* ─────────────────────────────────────────────────────
-   GLASS BUTTON
+   GLASS BUTTON — Apple-style frosted glass
+   Triad: elevation shadow (below) + inner top highlight
+   (specular edge) + translateY lift on hover
+
+   Color logic: the neutral variant sits on a near-black
+   background (#000 / #0a0a0f). Pure white-tinted glass at
+   low opacity reads as "disabled" next to the saturated
+   --blue variant in the same row (e.g. LinkedIn/GitHub/
+   ORCID/CV). Giving it a cyan tint — already the site's
+   secondary accent color (see --cyan, used on .edu-dot) —
+   gives it its own identity instead of looking like a
+   washed-out copy of the blue button.
 ───────────────────────────────────────────────────── */
 .btn-glass {
+  position: relative;
   display: inline-flex; align-items: center; gap: .35rem;
   padding: .42rem 1rem;
-  background: rgba(255,255,255,.06);
-  backdrop-filter: blur(12px) saturate(160%);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
-  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(0,199,255,.22), rgba(0,199,255,.08));
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(120,225,255,.32);
   border-radius: 2rem;
-  font-size: .72rem; font-weight: 300; font-family: var(--sans); letter-spacing: .02em;
-  color: var(--t2); cursor: pointer; text-decoration: none;
-  transition: background .2s, border-color .2s, color .2s;
+  font-size: .72rem; font-weight: 400; font-family: var(--sans); letter-spacing: .02em;
+  color: #e8fbff; cursor: pointer; text-decoration: none;
+  box-shadow:
+    0 1px 1px rgba(220,250,255,.16) inset,   /* inner top highlight */
+    0 -1px 1px rgba(0,40,55,.3) inset,       /* inner bottom edge, grounds the glass */
+    0 6px 16px rgba(0,140,180,.22),          /* elevation shadow */
+    0 1px 2px rgba(0,0,0,.3);                /* contact shadow */
+  transition: transform .2s ease, box-shadow .25s ease, background .25s ease, border-color .25s ease;
 }
 .btn-glass:hover {
-  background: rgba(255,255,255,.11);
-  border-color: rgba(255,255,255,.26);
-  color: var(--t1);
+  background: linear-gradient(180deg, rgba(0,199,255,.32), rgba(0,199,255,.14));
+  border-color: rgba(140,230,255,.5);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 1px rgba(220,250,255,.22) inset,
+    0 -1px 1px rgba(0,40,55,.3) inset,
+    0 10px 24px rgba(0,160,200,.3),
+    0 2px 4px rgba(0,0,0,.3);
+}
+.btn-glass:active {
+  transform: translateY(0);
+  box-shadow:
+    0 1px 1px rgba(220,250,255,.18) inset,
+    0 -1px 1px rgba(0,40,55,.32) inset,
+    0 2px 8px rgba(0,140,180,.2);
 }
 .btn-glass--blue {
-  background: rgba(0,113,227,.18);
-  border-color: rgba(0,113,227,.38);
-  color: var(--t1);
+  background: linear-gradient(180deg, rgba(40,140,255,.32), rgba(0,113,227,.16));
+  border-color: rgba(80,160,255,.4);
+  color: #eaf4ff;
+  box-shadow:
+    0 1px 1px rgba(180,220,255,.18) inset,
+    0 -1px 1px rgba(0,40,100,.3) inset,
+    0 6px 16px rgba(0,60,150,.3),
+    0 1px 2px rgba(0,0,0,.3);
 }
 .btn-glass--blue:hover {
-  background: rgba(0,113,227,.30);
-  border-color: rgba(0,113,227,.58);
+  background: linear-gradient(180deg, rgba(60,155,255,.42), rgba(0,113,227,.24));
+  border-color: rgba(110,180,255,.58);
   color: #fff;
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 1px rgba(200,230,255,.25) inset,
+    0 -1px 1px rgba(0,40,100,.3) inset,
+    0 10px 24px rgba(0,70,170,.4),
+    0 2px 4px rgba(0,0,0,.3);
 }
 .btn-glass--red {
-  background: rgba(200,30,50,.18);
-  border-color: rgba(220,50,70,.38);
-  color: #ff8a90;
+  background: linear-gradient(180deg, rgba(255,80,100,.3), rgba(200,30,50,.16));
+  border-color: rgba(255,110,125,.4);
+  color: #ffd6d9;
+  box-shadow:
+    0 1px 1px rgba(255,200,205,.17) inset,
+    0 -1px 1px rgba(90,0,10,.3) inset,
+    0 6px 16px rgba(150,0,20,.3),
+    0 1px 2px rgba(0,0,0,.3);
 }
 .btn-glass--red:hover {
-  background: rgba(200,30,50,.32);
-  border-color: rgba(220,50,70,.65);
-  color: #ffb3b7;
+  background: linear-gradient(180deg, rgba(255,95,115,.4), rgba(200,30,50,.24));
+  border-color: rgba(255,130,145,.6);
+  color: #fff0f1;
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 1px rgba(255,210,215,.24) inset,
+    0 -1px 1px rgba(90,0,10,.3) inset,
+    0 10px 24px rgba(170,0,25,.4),
+    0 2px 4px rgba(0,0,0,.3);
 }
+.btn-glass:active.btn-glass--blue,
+.btn-glass:active.btn-glass--red { transform: translateY(0); }
 
 .edu-doc-btn { margin-top: .75rem; }
 
