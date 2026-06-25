@@ -182,7 +182,7 @@ async function lbDrawPages(pdf, scale, gen) {
   const loading = document.getElementById('lb-pdf-loading');
   pages.innerHTML = '';
   loading.classList.remove('hidden');
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
   for (let i = 1; i <= pdf.numPages; i++) {
     if (lbGen !== gen) return;   // stale — a newer render started, abort
@@ -696,19 +696,30 @@ window.addEventListener('scroll', () => {
 })();
 
 /* ═══════════════════════════════════════════════════
-   EDUCATION — math.svg parallax (opposite to scroll)
+   EDUCATION — math.svg parallax (vertical only, no drift)
 ══════════════════════════════════════════════════════ */
 (function () {
   const bg = document.querySelector('.edu-bg-math');
   if (!bg) return;
-  let posX = 0, posY = 0, lastY = window.scrollY, ticking = false;
+
+  const section = document.getElementById('education');
+  if (!section) return;
+
+  let ticking = false;
+
   function update() {
-    const dy = window.scrollY - lastY; lastY = window.scrollY;
-    posX -= dy * 0.11; posY -= dy * 0.18;
-    bg.style.backgroundPosition = posX.toFixed(1) + 'px ' + posY.toFixed(1) + 'px';
+    // Absolute offset from section top — no drift accumulation
+    const relScroll = window.scrollY - section.offsetTop;
+    // Pattern moves up at 35% of scroll speed → classic parallax lag
+    const posY = (relScroll * 0.35).toFixed(1);
+    bg.style.transform = 'translateY(' + posY + 'px)';
     ticking = false;
   }
+
   window.addEventListener('scroll', () => {
     if (!ticking) { requestAnimationFrame(update); ticking = true; }
   }, { passive: true });
+
+  // Set initial position on load
+  window.addEventListener('load', update);
 })();
