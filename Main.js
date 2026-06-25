@@ -613,9 +613,9 @@ window.addEventListener('scroll', () => {
 
   // Narrowed strict site palette matching your core UI design tokens
   const COLOR_PALETTE = [
-    { r: 0,   g: 199, b: 255, baseAlpha: 0.14 }, // --cyan primary
-    { r: 0,   g: 113, b: 227, baseAlpha: 0.15 }, // --blue primary
-    { r: 245, g: 245, b: 247, baseAlpha: 0.08 }  // Frosted White/Silver (--t1)
+    { r: 0,   g: 199, b: 255, baseAlpha: 0.38 }, // cyan  — nebula core colour
+    { r: 60,  g: 140, b: 255, baseAlpha: 0.28 }, // blue  — mid cloud
+    { r: 180, g: 120, b: 255, baseAlpha: 0.22 }  // violet — outer haze
   ];
 
   function init() {
@@ -625,7 +625,9 @@ window.addEventListener('scroll', () => {
 
     W = canvas.width  = section.offsetWidth;
     H = canvas.height = section.offsetHeight;
-    lastWidth = W; // Store physical width after calculation
+    lastWidth = W;
+    // Blur relative to canvas width: ~1.8px at 1440px, scales on all screens
+    canvas.style.filter = `blur(${Math.max(0.6, W * 0.00125).toFixed(2)}px)`;
 
     const sr = section.getBoundingClientRect();
     const qr = quote.getBoundingClientRect();
@@ -743,6 +745,8 @@ window.addEventListener('scroll', () => {
     ctx.rect(0, clipTop - 40, W, clipBot - clipTop + 80);
     ctx.clip();
 
+    // 'screen' blend: overlapping segments add luminosity — bright cores at junctions
+    ctx.globalCompositeOperation = 'screen';
     ctx.lineWidth = 1.0;
 
     const colorBuckets = Array.from({ length: COLOR_PALETTE.length }, () => []);
