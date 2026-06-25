@@ -599,54 +599,129 @@ window.addEventListener('scroll', () => {
   obs.observe(hs);
 })();
 /* ═══════════════════════════════════════════════════
-   ABOUT — FRACTAL TREE (scroll-driven, seeded RNG)
+   ABOUT — HIGH-DENSITY BATCHED CHAOTIC FRACTAL (Intersection Optimized)
 ══════════════════════════════════════════════════════ */
 (function () {
-  function mulberry32(a) {
-    return function () {
-      a |= 0; a = a + 0x6D2B79F5 | 0;
-      var t = Math.imul(a ^ a >>> 15, 1 | a);
-      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
-  }
-  const rng = mulberry32(Date.now() | 0);
-
   const canvas = document.getElementById('fractal-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
 
-  const MAX_DEPTH = 8;
-  let branchesL = [], branchesR = [];
-  let W = 0, H = 0, clipTop = 0, clipBot = 0, midY = 0;
+  let W = 0, H = 0, clipTop = 0, clipBot = 0;
+  let seeds = [];
+  let isVisible = false; // Guard flag to halt execution when completely out of viewport
 
-  function gen(x, y, angle, len, depth, arr) {
-    if (depth === 0 || len < 1.5) return;
-    const ex = x + Math.cos(angle) * len;
-    const ey = y + Math.sin(angle) * len;
-    arr.push({ x1: x, y1: y, x2: ex, y2: ey, depth });
-    const spread = 0.22 + rng() * 0.32;
-    const lf     = 0.58 + rng() * 0.16;
-    const bias   = (rng() - 0.5) * 0.12;
-    gen(ex, ey, angle - spread + bias, len * lf,        depth - 1, arr);
-    gen(ex, ey, angle + spread + bias, len * lf * 0.95, depth - 1, arr);
-  }
+  // Narrowed strict site palette matching your core UI design tokens
+  const COLOR_PALETTE = [
+    { r: 0,   g: 199, b: 255, baseAlpha: 0.14 }, // --cyan primary
+    { r: 0,   g: 113, b: 227, baseAlpha: 0.15 }, // --blue primary
+    { r: 245, g: 245, b: 247, baseAlpha: 0.08 }  // Frosted White/Silver (--t1)
+  ];
 
   function init() {
     const section = document.getElementById('about');
     const quote   = document.querySelector('.about-quote');
     if (!section || !quote) return;
+
     W = canvas.width  = section.offsetWidth;
     H = canvas.height = section.offsetHeight;
+
     const sr = section.getBoundingClientRect();
     const qr = quote.getBoundingClientRect();
+
     clipTop = qr.top  - sr.top;
     clipBot = qr.bottom - sr.top;
-    midY    = (clipTop + clipBot) / 2;
-    const initLen = W * 0.38;
-    branchesL = []; branchesR = [];
-    gen(0, midY,  0,       initLen, MAX_DEPTH, branchesL);
-    gen(W, midY,  Math.PI, initLen, MAX_DEPTH, branchesR);
+
+    generateCrystals();
+  }
+
+  function generateCrystals() {
+    seeds = [];
+    const areaHeight = clipBot - clipTop;
+    const canvasArea = W * areaHeight;
+
+    /* 💡 DENSITY MULTIPLIER CONTROL */
+    const DENSITY_MULTIPLIER = 3.14;
+
+    const count = Math.floor((canvasArea / 2800) * DENSITY_MULTIPLIER);
+
+    const aspect = W / areaHeight;
+    const cols = Math.max(1, Math.round(Math.sqrt(count * aspect)));
+    const rows = Math.max(1, Math.ceil(count / cols));
+
+    const cellW = W / cols;
+    const cellH = areaHeight / rows;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (seeds.length >= count) break;
+
+        const baseX = c * cellW;
+        const baseY = clipTop + r * cellH;
+
+        const x = baseX + Math.random() * cellW;
+        const y = baseY + Math.random() * cellH;
+
+        const segments = [];
+        const mainAxes = 3 + Math.floor(Math.random() * 3);
+        const baseAngle = Math.random() * Math.PI * 2;
+
+        const colorIndex = Math.floor(Math.random() * COLOR_PALETTE.length);
+
+        for (let a = 0; a < mainAxes; a++) {
+          let currentAngle = baseAngle + (a * Math.PI * 2) / mainAxes;
+          let curX = 0;
+          let curY = 0;
+
+          const steps = 4 + Math.floor(Math.random() * 3);
+          const stepLength = 4 + Math.random() * 4;
+
+          for (let s = 0; s < steps; s++) {
+            currentAngle += (Math.random() - 0.5) * 0.55;
+
+            const nextX = curX + Math.cos(currentAngle) * stepLength;
+            const nextY = curY + Math.sin(currentAngle) * stepLength;
+
+            segments.push({
+              x1: curX, y1: curY,
+              x2: nextX, y2: nextY,
+              growthStart: (s / steps) * 0.5,
+              growthEnd: ((s + 1) / steps) * 0.5 + 0.15
+            });
+
+            if (Math.random() > 0.35) {
+              let subAngle = currentAngle + (Math.random() > 0.5 ? 0.75 : -0.75);
+              let subX = nextX;
+              let subY = nextY;
+
+              const subSteps = 2 + Math.floor(Math.random() * 2);
+              for (let ss = 0; ss < subSteps; ss++) {
+                subAngle += (Math.random() - 0.5) * 0.35;
+                const nSubX = subX + Math.cos(subAngle) * (stepLength * 0.65);
+                const nSubY = subY + Math.sin(subAngle) * (stepLength * 0.65);
+
+                segments.push({
+                  x1: subX, y1: subY,
+                  x2: nSubX, y2: nSubY,
+                  growthStart: (s / steps) * 0.5 + 0.15,
+                  growthEnd: 0.7 + Math.random() * 0.25
+                });
+
+                subX = nSubX;
+                subY = nSubY;
+              }
+            }
+
+            curX = nextX;
+            curY = nextY;
+          }
+        }
+
+        const verticalFactor = (y - clipTop) / areaHeight;
+        const activationThreshold = 0.02 + verticalFactor * 0.45 + Math.random() * 0.1;
+
+        seeds.push({ x, y, segments, activationThreshold, colorIndex });
+      }
+    }
   }
 
   function getProgress() {
@@ -654,44 +729,112 @@ window.addEventListener('scroll', () => {
     if (!q) return 0;
     const r = q.getBoundingClientRect();
     const vh = window.innerHeight;
-    return Math.max(0, Math.min(1, (vh * 0.9 - r.top) / (vh * 0.7)));
-  }
-
-  function lerp(a, b, t) { return a + (b - a) * t; }
-
-  function drawSide(branches, progress) {
-    const count = Math.floor(branches.length * progress);
-    for (let i = 0; i < count; i++) {
-      const b = branches[i];
-      const t = 1 - (b.depth - 1) / (MAX_DEPTH - 1);
-      const alpha = (1 - t * 0.65) * 0.28 * progress;
-      ctx.strokeStyle = `rgba(${Math.round(lerp(0,140,t))},${Math.round(lerp(199,130,t))},255,${alpha})`;
-      ctx.lineWidth   = Math.max(0.4, b.depth * 0.5);
-      ctx.beginPath(); ctx.moveTo(b.x1, b.y1); ctx.lineTo(b.x2, b.y2); ctx.stroke();
-    }
+    return Math.max(0, Math.min(1, (vh * 0.95 - r.top) / (vh * 0.75)));
   }
 
   function draw(progress) {
     ctx.clearRect(0, 0, W, H);
-    if (progress <= 0) return;
-    const e = progress < 0.5 ? 2*progress*progress : 1-Math.pow(-2*progress+2,2)/2;
+    if (progress <= 0.002) return;
+
     ctx.save();
-    ctx.beginPath(); ctx.rect(0, clipTop - 16, W, clipBot - clipTop + 32); ctx.clip();
-    ctx.lineCap = 'round';
-    drawSide(branchesL, e); drawSide(branchesR, e);
+    ctx.beginPath();
+    ctx.rect(0, clipTop - 40, W, clipBot - clipTop + 80);
+    ctx.clip();
+
+    ctx.lineWidth = 1.0;
+
+    const colorBuckets = Array.from({ length: COLOR_PALETTE.length }, () => []);
+
+    for (let i = 0; i < seeds.length; i++) {
+      const seed = seeds[i];
+      if (progress < seed.activationThreshold) continue;
+
+      const localProgress = (progress - seed.activationThreshold) / (1 - seed.activationThreshold);
+      const bucket = colorBuckets[seed.colorIndex];
+
+      for (let j = 0; j < seed.segments.length; j++) {
+        const seg = seed.segments[j];
+        if (localProgress < seg.growthStart) continue;
+
+        const segProgress = Math.min(1, (localProgress - seg.growthStart) / (seg.growthEnd - seg.growthStart));
+
+        const x1 = (seed.x + seg.x1) | 0;
+        const y1 = (seed.y + seg.y1) | 0;
+        const x2 = (seed.x + seg.x1 + (seg.x2 - seg.x1) * segProgress) | 0;
+        const y2 = (seed.y + seg.y1 + (seg.y2 - seg.y1) * segProgress) | 0;
+
+        bucket.push(x1, y1, x2, y2);
+      }
+    }
+
+    for (let c = 0; c < COLOR_PALETTE.length; c++) {
+      const lines = colorBuckets[c];
+      if (lines.length === 0) continue;
+
+      const col = COLOR_PALETTE[c];
+      ctx.strokeStyle = `rgba(${col.r}, ${col.g}, ${col.b}, ${col.baseAlpha * progress})`;
+      ctx.beginPath();
+
+      for (let i = 0; i < lines.length; i += 4) {
+        ctx.moveTo(lines[i], lines[i + 1]);
+        ctx.lineTo(lines[i + 2], lines[i + 3]);
+      }
+      ctx.stroke();
+    }
+
     ctx.restore();
   }
 
   let lastP = -1, rafId = null;
   function onScroll() {
+    if (!isVisible) return; // 🚀 Fast short-circuit: zero execution when section is off-screen
+
     const p = getProgress();
-    if (Math.abs(p - lastP) < 0.004) return;
+    if (Math.abs(p - lastP) < 0.003) return;
     lastP = p;
-    if (!rafId) rafId = requestAnimationFrame(() => { draw(lastP); rafId = null; });
+    if (!rafId) {
+      rafId = requestAnimationFrame(() => {
+        draw(lastP);
+        rafId = null;
+      });
+    }
   }
 
-  window.addEventListener('load',   () => { init(); draw(getProgress()); });
-  window.addEventListener('resize', () => { init(); draw(getProgress()); });
+  // Modern asynchronous lifecycle management
+  function setupObserver() {
+    const section = document.getElementById('about');
+    if (!section) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        isVisible = entry.isIntersecting;
+
+        // Lazy-init the mathematical grid only when the section is about to be seen
+        if (isVisible && seeds.length === 0) {
+          init();
+          draw(getProgress());
+        }
+      });
+    }, {
+      root: null,          // Bounded by global viewport
+      rootMargin: '100px', // Wake up 100px early for a seamless visual transition
+      threshold: 0         // Active as soon as the first pixel line intersects
+    });
+
+    observer.observe(section);
+  }
+
+  window.addEventListener('load', () => {
+    setupObserver();
+  });
+
+  window.addEventListener('resize', () => {
+    if (isVisible) {
+      init();
+      draw(getProgress());
+    }
+  });
+
   window.addEventListener('scroll', onScroll, { passive: true });
 })();
 
