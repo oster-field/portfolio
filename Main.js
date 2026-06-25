@@ -599,7 +599,7 @@ window.addEventListener('scroll', () => {
   obs.observe(hs);
 })();
 /* ═══════════════════════════════════════════════════
-   ABOUT — HIGH-DENSITY BATCHED CHAOTIC FRACTAL (Intersection Optimized)
+   ABOUT — HIGH-DENSITY BATCHED CHAOTIC FRACTAL (iOS Safari Fix)
 ══════════════════════════════════════════════════════ */
 (function () {
   const canvas = document.getElementById('fractal-canvas');
@@ -607,8 +607,9 @@ window.addEventListener('scroll', () => {
   const ctx = canvas.getContext('2d');
 
   let W = 0, H = 0, clipTop = 0, clipBot = 0;
+  let lastWidth = 0; // Cache width to bypass false iOS Safari resize events
   let seeds = [];
-  let isVisible = false; // Guard flag to halt execution when completely out of viewport
+  let isVisible = false;
 
   // Narrowed strict site palette matching your core UI design tokens
   const COLOR_PALETTE = [
@@ -624,6 +625,7 @@ window.addEventListener('scroll', () => {
 
     W = canvas.width  = section.offsetWidth;
     H = canvas.height = section.offsetHeight;
+    lastWidth = W; // Store physical width after calculation
 
     const sr = section.getBoundingClientRect();
     const qr = quote.getBoundingClientRect();
@@ -787,7 +789,7 @@ window.addEventListener('scroll', () => {
 
   let lastP = -1, rafId = null;
   function onScroll() {
-    if (!isVisible) return; // 🚀 Fast short-circuit: zero execution when section is off-screen
+    if (!isVisible) return;
 
     const p = getProgress();
     if (Math.abs(p - lastP) < 0.003) return;
@@ -800,7 +802,6 @@ window.addEventListener('scroll', () => {
     }
   }
 
-  // Modern asynchronous lifecycle management
   function setupObserver() {
     const section = document.getElementById('about');
     if (!section) return;
@@ -809,16 +810,15 @@ window.addEventListener('scroll', () => {
       entries.forEach(entry => {
         isVisible = entry.isIntersecting;
 
-        // Lazy-init the mathematical grid only when the section is about to be seen
         if (isVisible && seeds.length === 0) {
           init();
           draw(getProgress());
         }
       });
     }, {
-      root: null,          // Bounded by global viewport
-      rootMargin: '100px', // Wake up 100px early for a seamless visual transition
-      threshold: 0         // Active as soon as the first pixel line intersects
+      root: null,
+      rootMargin: '100px',
+      threshold: 0
     });
 
     observer.observe(section);
@@ -829,9 +829,15 @@ window.addEventListener('scroll', () => {
   });
 
   window.addEventListener('resize', () => {
+    // Prevent execution if visual width hasn't changed (blocks dynamic address bar updates in mobile browsers)
+    if (canvas.offsetWidth === lastWidth) return;
+
     if (isVisible) {
       init();
       draw(getProgress());
+    } else {
+      // Force layout reconstruction on next scroll intersection if resized while out of view
+      seeds = [];
     }
   });
 
