@@ -321,17 +321,29 @@
       <button class="lb-close-btn" onclick="closeLightbox()" aria-label="Close">&#x2715;</button>
     </div>
     <div class="lb-body">
-      <!-- Native browser PDF viewer — handles zoom, scroll, pages automatically -->
-      <iframe id="lb-iframe" title="Document viewer" allowfullscreen></iframe>
-
+      <div id="lb-pdf-loading" class="lb-pdf-loading">
+        <div class="lb-spinner"></div>
+        <p class="lb-loading-text" data-k="lb_loading">Loading…</p>
+      </div>
+      <div id="lb-pdf-viewer">
+        <div id="lb-pdf-pages" class="lb-pdf-pages"></div>
+      </div>
     </div>
     <div class="lb-footer">
-      <a class="btn-glass btn-glass--blue" id="lb-dl" href="" download data-k="lb_dl">Download</a>
-      <button class="btn-glass btn-glass--red" onclick="closeLightbox()" data-k="lb_close">Close</button>
+      <div class="lb-zoom-controls">
+        <button class="lb-zoom-btn" onclick="lbZoom(-1)" title="Zoom out">−</button>
+        <span class="lb-zoom-level" id="lb-zoom-label">100%</span>
+        <button class="lb-zoom-btn" onclick="lbZoom(+1)" title="Zoom in">+</button>
+      </div>
+      <div class="lb-footer-actions">
+        <a class="btn-glass btn-glass--blue" id="lb-dl" href="" download data-k="lb_dl">Download</a>
+        <button class="btn-glass btn-glass--red" onclick="closeLightbox()" data-k="lb_close">Close</button>
+      </div>
     </div>
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="Main.js"></script>
 </body>
 </html>

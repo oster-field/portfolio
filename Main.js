@@ -153,9 +153,73 @@ const LB_DOCS = {
   },
 };
 
-/* ─── iOS Safari detection ─── */
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
+/* ─── PDF.js setup ─── */
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+const NATURAL_SCALE = 96 / 72;  // 100% = 96dpi / 72pt
+const ZOOM_STEPS    = [0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+
+let lbPdfDoc      = null;   // current pdf.js document
+let lbBaseScale   = 1;      // fit-width scale calculated on open
+let lbZoomIdx     = 4;      // index into ZOOM_STEPS (default 1.0 = 100%)
+let lbRenderTask  = null;   // debounce re-render
+
+function lbZoom(dir) {
+  lbZoomIdx = Math.max(0, Math.min(ZOOM_STEPS.length - 1, lbZoomIdx + dir));
+  document.getElementById('lb-zoom-label').textContent =
+    Math.round(ZOOM_STEPS[lbZoomIdx] * 100) + '%';
+  if (lbPdfDoc) lbDrawPages(lbPdfDoc, lbBaseScale * ZOOM_STEPS[lbZoomIdx]);
+}
+
+async function lbDrawPages(pdf, scale) {
+  const pages   = document.getElementById('lb-pdf-pages');
+  const loading = document.getElementById('lb-pdf-loading');
+  pages.innerHTML = '';
+  loading.classList.remove('hidden');
+  const dpr = window.devicePixelRatio || 1;
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const vp   = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width  = Math.round(vp.width  * dpr);
+    canvas.height = Math.round(vp.height * dpr);
+    canvas.style.width  = Math.round(vp.width)  + 'px';
+    canvas.style.height = Math.round(vp.height) + 'px';
+    const wrap = document.createElement('div');
+    wrap.className = 'lb-page-wrap';
+    wrap.appendChild(canvas);
+    pages.appendChild(wrap);
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  }
+  loading.classList.add('hidden');
+}
+
+async function renderPDF(path) {
+  const viewer = document.getElementById('lb-pdf-viewer');
+  const containerW = viewer.getBoundingClientRect().width;
+
+  lbPdfDoc = await pdfjsLib.getDocument(path).promise;
+
+  // Calculate base scale: natural 100% on wide screens, fit-width on mobile
+  const firstPage  = await lbPdfDoc.getPage(1);
+  const naturalW   = firstPage.getViewport({ scale: NATURAL_SCALE }).width;
+  const availW     = containerW - 32;
+  lbBaseScale = availW > 0 && naturalW > availW
+    ? availW / firstPage.getViewport({ scale: 1 }).width
+    : NATURAL_SCALE;
+
+  // Reset zoom to 100%
+  lbZoomIdx = 4;
+  document.getElementById('lb-zoom-label').textContent = '100%';
+
+  await lbDrawPages(lbPdfDoc, lbBaseScale * ZOOM_STEPS[lbZoomIdx]);
+}
 
 function openLightbox(docKey) {
   const meta = (LB_DOCS[docKey] || {})[lang] || (LB_DOCS[docKey] || {})['en'];
@@ -165,26 +229,22 @@ function openLightbox(docKey) {
   document.getElementById('lb-title').textContent = meta.title;
   document.getElementById('lb-dl').href           = meta.path;
 
-  const iframe = document.getElementById('lb-iframe');
-  // PDF URL fragment params:
-  //   navpanes=0  — hide sidebar/thumbnails on all platforms
-  //   view=FitH   — fit page width on load (important for iOS initial scale)
-  //   toolbar=0   — hide redundant toolbar on iOS (Safari has its own controls)
-  const src = isIOS
-    ? meta.path + '#toolbar=0&navpanes=0&view=FitH'
-    : meta.path + '#navpanes=0&view=FitH';
-  iframe.src = '';
-  requestAnimationFrame(() => { iframe.src = src; });
-
   document.getElementById('lb-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+
+  // Wait for overlay to paint so getBoundingClientRect returns real width
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { renderPDF(meta.path); });
+  });
 }
 
 function closeLightbox() {
   document.getElementById('lb-overlay').classList.remove('open');
   document.body.style.overflow = '';
   setTimeout(() => {
-    document.getElementById('lb-iframe').src = '';
+    lbPdfDoc = null;
+    document.getElementById('lb-pdf-pages').innerHTML = '';
+    document.getElementById('lb-pdf-loading').classList.remove('hidden');
   }, 300);
 }
 
