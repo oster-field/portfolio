@@ -163,27 +163,34 @@ if (typeof pdfjsLib !== 'undefined') {
 const NATURAL_SCALE = 96 / 72;  // 100% = 96dpi / 72pt
 const ZOOM_STEPS    = [0.5, 0.67, 0.75, 0.9, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
-let lbPdfDoc      = null;   // current pdf.js document
-let lbBaseScale   = 1;      // fit-width scale calculated on open
-let lbZoomIdx     = 4;      // index into ZOOM_STEPS (default 1.0 = 100%)
-let lbRenderTask  = null;   // debounce re-render
+let lbPdfDoc    = null;
+let lbBaseScale = NATURAL_SCALE;
+let lbZoomIdx   = 4;
+let lbGen       = 0;   // generation counter — stale renders check this and abort
 
 function lbZoom(dir) {
   lbZoomIdx = Math.max(0, Math.min(ZOOM_STEPS.length - 1, lbZoomIdx + dir));
   document.getElementById('lb-zoom-label').textContent =
     Math.round(ZOOM_STEPS[lbZoomIdx] * 100) + '%';
-  if (lbPdfDoc) lbDrawPages(lbPdfDoc, lbBaseScale * ZOOM_STEPS[lbZoomIdx]);
+  if (!lbPdfDoc) return;
+  const gen = ++lbGen;
+  lbDrawPages(lbPdfDoc, lbBaseScale * ZOOM_STEPS[lbZoomIdx], gen);
 }
 
-async function lbDrawPages(pdf, scale) {
+async function lbDrawPages(pdf, scale, gen) {
   const pages   = document.getElementById('lb-pdf-pages');
   const loading = document.getElementById('lb-pdf-loading');
   pages.innerHTML = '';
   loading.classList.remove('hidden');
   const dpr = window.devicePixelRatio || 1;
+
   for (let i = 1; i <= pdf.numPages; i++) {
+    if (lbGen !== gen) return;   // stale — a newer render started, abort
+
     const page = await pdf.getPage(i);
-    const vp   = page.getViewport({ scale });
+    if (lbGen !== gen) return;
+
+    const vp     = page.getViewport({ scale });
     const canvas = document.createElement('canvas');
     canvas.width  = Math.round(vp.width  * dpr);
     canvas.height = Math.round(vp.height * dpr);
@@ -197,28 +204,38 @@ async function lbDrawPages(pdf, scale) {
     ctx.scale(dpr, dpr);
     await page.render({ canvasContext: ctx, viewport: vp }).promise;
   }
-  loading.classList.add('hidden');
+
+  if (lbGen === gen) loading.classList.add('hidden');
 }
 
 async function renderPDF(path) {
+  const gen = ++lbGen;
   const viewer = document.getElementById('lb-pdf-viewer');
   const containerW = viewer.getBoundingClientRect().width;
 
-  lbPdfDoc = await pdfjsLib.getDocument(path).promise;
+  try {
+    const pdf = await pdfjsLib.getDocument(path).promise;
+    if (lbGen !== gen) return;   // lightbox closed while loading
 
-  // Calculate base scale: natural 100% on wide screens, fit-width on mobile
-  const firstPage  = await lbPdfDoc.getPage(1);
-  const naturalW   = firstPage.getViewport({ scale: NATURAL_SCALE }).width;
-  const availW     = containerW - 32;
-  lbBaseScale = availW > 0 && naturalW > availW
-    ? availW / firstPage.getViewport({ scale: 1 }).width
-    : NATURAL_SCALE;
+    lbPdfDoc = pdf;
+    const firstPage = await pdf.getPage(1);
+    const naturalW  = firstPage.getViewport({ scale: NATURAL_SCALE }).width;
+    const availW    = containerW - 32;
+    lbBaseScale = (availW > 0 && naturalW > availW)
+      ? availW / firstPage.getViewport({ scale: 1 }).width
+      : NATURAL_SCALE;
 
-  // Reset zoom to 100%
-  lbZoomIdx = 4;
-  document.getElementById('lb-zoom-label').textContent = '100%';
+    lbZoomIdx = 4;
+    document.getElementById('lb-zoom-label').textContent = '100%';
+    await lbDrawPages(pdf, lbBaseScale * ZOOM_STEPS[lbZoomIdx], gen);
 
-  await lbDrawPages(lbPdfDoc, lbBaseScale * ZOOM_STEPS[lbZoomIdx]);
+  } catch (err) {
+    if (lbGen === gen) {
+      console.error('PDF render error:', err);
+      const txt = document.querySelector('#lb-pdf-loading .lb-loading-text');
+      if (txt) txt.textContent = 'Could not load document.';
+    }
+  }
 }
 
 function openLightbox(docKey) {
@@ -239,12 +256,17 @@ function openLightbox(docKey) {
 }
 
 function closeLightbox() {
+  lbGen++;   // cancel any in-progress render immediately
   document.getElementById('lb-overlay').classList.remove('open');
   document.body.style.overflow = '';
   setTimeout(() => {
-    lbPdfDoc = null;
+    if (lbPdfDoc) { lbPdfDoc.destroy(); lbPdfDoc = null; }
     document.getElementById('lb-pdf-pages').innerHTML = '';
-    document.getElementById('lb-pdf-loading').classList.remove('hidden');
+    const loading = document.getElementById('lb-pdf-loading');
+    loading.classList.remove('hidden');
+    const txt = loading.querySelector('.lb-loading-text');
+    if (txt) txt.textContent = txt.getAttribute('data-k') === 'lb_loading'
+      ? (lang === 'de' ? 'Wird geladen…' : 'Loading…') : 'Loading…';
   }, 300);
 }
 
