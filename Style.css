@@ -921,7 +921,9 @@ footer p { font-size: .7rem; color: var(--t3); }
 ───────────────────────────────────────────────────── */
 #education { position: relative; overflow: hidden; }
 .edu-bg-math {
-  position: absolute; inset: 0;
+  position: absolute;
+  /* Extend 40% beyond top/bottom so parallax translateY never leaves a gap */
+  top: -40%; bottom: -40%; left: 0; right: 0;
   background: url('img/math.svg') 0 0 / 900px auto repeat;
   opacity: .09;
   filter: invert(1) sepia(1) saturate(2) hue-rotate(185deg);
@@ -983,18 +985,12 @@ footer p { font-size: .7rem; color: var(--t3); }
 ───────────────────────────────────────────────────── */
 @media (max-width: 900px) and (orientation: portrait) {
   .hero-photo-wrap {
-    /* Anchor to top of hero, below nav */
     top: 3.25rem;
     bottom: auto;
-    /* Height = distance from nav to midpoint between eyebrow & h1.
-       Hero-body sits at ~50vh; eyebrow is ~3rem above h1.
-       Midpoint ≈ 50vh - 1.5rem from centre = ~46vh from top */
     height: calc(46vh - 3.25rem);
-    /* Horizontal: right-aligned, fades inward */
     right: 0;
     width: auto;
     opacity: 1;
-    /* Top: fade in gently from nav level; bottom: dissolve before eyebrow */
     -webkit-mask-image: linear-gradient(to bottom,
       transparent  0%,
       black        12%,
@@ -1004,6 +1000,42 @@ footer p { font-size: .7rem; color: var(--t3); }
       transparent  0%,
       black        12%,
       black        72%,
+      transparent 100%);
+  }
+
+  .hero-photo {
+    height: 100%;
+    width: auto;
+  }
+}
+
+/* ─────────────────────────────────────────────────────
+   ART DIRECTION — LANDSCAPE PHONE
+   Phones in landscape are always ≤500px tall (tablets are not).
+   Same top-anchor logic as portrait, but photo is wider
+   relative to the short viewport and sits right of the text.
+───────────────────────────────────────────────────── */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hero-photo-wrap {
+    /* Anchor to top of hero below nav — same as portrait */
+    top: 3.25rem;
+    bottom: auto;
+    /* Fill from nav down to ~60vh = just above the wave line (63vh).
+       This keeps the face visible while the shoulders dissolve into waves. */
+    height: calc(58vh - 3.25rem);
+    right: 0;
+    width: auto;
+    opacity: 0.85;
+    /* Top: soft fade from nav; bottom: dissolve into waves */
+    -webkit-mask-image: linear-gradient(to bottom,
+      transparent  0%,
+      black        14%,
+      black        68%,
+      transparent 100%);
+    mask-image: linear-gradient(to bottom,
+      transparent  0%,
+      black        14%,
+      black        68%,
       transparent 100%);
   }
 

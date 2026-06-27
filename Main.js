@@ -258,7 +258,10 @@ function openLightbox(docKey) {
 function closeLightbox() {
   lbGen++;   // cancel any in-progress render immediately
   document.getElementById('lb-overlay').classList.remove('open');
-  document.body.style.overflow = '';
+  // Only restore scroll if mobile menu is also closed (mirrors closeMenu logic)
+  if (!document.getElementById('mob-menu').classList.contains('open')) {
+    document.body.style.overflow = '';
+  }
   setTimeout(() => {
     if (lbPdfDoc) { lbPdfDoc.destroy(); lbPdfDoc = null; }
     document.getElementById('lb-pdf-pages').innerHTML = '';
@@ -577,6 +580,9 @@ document.querySelectorAll('.counter').forEach(el => cntObs.observe(el));
 window.addEventListener('scroll', () => {
   document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 55);
 }, {passive:true});
+
+// Initialise language state — syncs mobile menu .on class and document.lang on first load
+setLang('en');
 
 /* ═══════════════════════════════════════════════════
    HANDSHAKE — scroll-triggered animation
