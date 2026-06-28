@@ -419,18 +419,46 @@ document.addEventListener('keydown', function(e) {
 
 /* ═══════════════════════════════════════════════════
    PUBLICATION VISUALISATIONS
+   — mirrors fractal's lastWidth guard (blocks iOS false resize)
+   — mirrors fractal's isVisible flag (no draw when off-screen)
 ══════════════════════════════════════════════════════ */
 function initViz(id, drawFn) {
-  const obs = new IntersectionObserver(entries => {
-    if (!entries[0].isIntersecting) return;
-    obs.disconnect();
-    const cv = document.getElementById(id);
-    const p  = cv.parentElement;
-    function resize() { cv.width = p.offsetWidth; cv.height = p.offsetHeight; drawFn(cv); }
-    resize();
-    window.addEventListener('resize', resize, {passive:true});
-  }, {threshold:.25});
-  obs.observe(document.getElementById(id));
+  const cv     = document.getElementById(id);
+  if (!cv) return;
+  const parent = cv.parentElement;
+  let lastWidth = 0;
+  let isVisible = false;
+  let played    = false;
+
+  function start() {
+    cv.width  = parent.offsetWidth;
+    cv.height = parent.offsetHeight;
+    lastWidth = cv.width;
+    drawFn(cv);
+    played = true;
+  }
+
+  function doResize() {
+    const w = parent.offsetWidth;
+    // Width unchanged = iOS address-bar height-only event → ignore
+    if (w === lastWidth) return;
+    lastWidth = w;
+    cv.width  = w;               // resetting .width clears canvas automatically
+    cv.height = parent.offsetHeight;
+    if (isVisible) {
+      drawFn(cv);                // real resize while visible → restart cleanly
+    } else {
+      played = false;            // real resize while off-screen → replay on next scroll-in
+    }
+  }
+
+  // Observer stays connected (no disconnect) so isVisible stays accurate
+  new IntersectionObserver(entries => {
+    isVisible = entries[0].isIntersecting;
+    if (isVisible && !played) start(); // play once on first scroll-in
+  }, { threshold: 0.25 }).observe(cv);
+
+  window.addEventListener('resize', doResize, { passive: true });
 }
 
 /* Viz 1 — Wave height histogram + Rayleigh curve + rogue zone */
