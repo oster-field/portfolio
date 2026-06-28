@@ -73,8 +73,6 @@ body {
   width: 2.6em; height: 2.6em;
   left: 50%; top: 50%;
   transform: translate(-50%, -50%);
-  overflow: hidden;
-  border-radius: 50%;
   pointer-events: none;
   opacity: 0;
   transition: opacity .4s;
@@ -83,6 +81,15 @@ body {
   background-repeat: no-repeat;
   background-position: 0% 0%;
   mix-blend-mode: screen;
+  /* The circular shape with its soft, feathered edge is baked directly
+     into each frame's own alpha channel in img/sprite.png — not built
+     here via mask-image/border-radius. A CSS mask-image radial-gradient
+     was tried first but behaved inconsistently (rendered as a square in
+     practice), and stacking it with overflow:hidden + border-radius
+     double-clipped against it, making the whole disc look uniformly
+     dimmer instead of softening at the edge. Pre-baking the circle into
+     the asset itself sidesteps both problems and is also slightly
+     smaller on disk (no leftover square corners to encode). */
 }
 #nav.scrolled .nav-logo-sprite { opacity: .38; }
 
