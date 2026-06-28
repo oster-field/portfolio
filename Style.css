@@ -49,8 +49,42 @@ body {
   font-family: var(--serif); font-size: 1rem; font-weight: 300;
   letter-spacing: .06em; color: var(--t1); text-decoration: none;
   opacity: 0; transition: opacity .3s;
+  position: relative; z-index: 1;
 }
 #nav.scrolled .nav-logo { opacity: 1; }
+
+/* Cosmic sprite glow behind the "AT" logo. Sized in em relative to the
+   logo's own font-size (1rem here, but the wrap inherits the logo's
+   computed size so it scales if .nav-logo's font-size ever changes via
+   a media query) — never a fixed px box. The sheet is a 5x7 grid of
+   51x51 frames (32 real frames; the last 3 grid cells are transparent
+   padding and are never indexed by JS), so background-size is exactly
+   500% x 700%: showing one frame at 100% of the container's own size
+   is what makes "one grid cell == one container" true regardless of
+   how large the container itself is rendered. */
+.nav-logo-wrap {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.nav-logo-sprite {
+  position: absolute;
+  /* Square container slightly larger than the glyph box, in em so it
+     tracks the logo's font-size at any breakpoint. */
+  width: 2.6em; height: 2.6em;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .4s;
+  background-image: url('img/sprite.png');
+  background-size: 500% 700%;
+  background-repeat: no-repeat;
+  background-position: 0% 0%;
+  mix-blend-mode: screen;
+}
+#nav.scrolled .nav-logo-sprite { opacity: .38; }
 
 .nav-links { display: flex; gap: 1.75rem; list-style: none; }
 .nav-links a {

@@ -910,3 +910,76 @@ setLang('en');
   // Set initial position on load
   window.addEventListener('load', update);
 })();
+
+/* ═══════════════════════════════════════════════════
+   NAV LOGO — scroll-scrubbed cosmic sprite
+   Sheet: 5 cols x 7 rows of 51x51 frames, 32 real frames
+   (the last 3 grid cells are transparent padding and are
+   skipped so the loop never flashes blank).
+   The frame index is a pure function of accumulated scroll
+   delta, not of time — so scrolling down advances forward,
+   scrolling up runs it backward, and it is bit-for-bit
+   frozen whenever the page isn't actively being scrolled
+   (no idle drift, no animation loop running in the
+   background). Looping wraps both directions via the
+   ((n % m) + m) % m trick so reversing past frame 0 goes
+   to the last frame instead of negative/NaN.
+══════════════════════════════════════════════════════ */
+(function () {
+  const sprite = document.querySelector('.nav-logo-sprite');
+  if (!sprite) return;
+
+  const COLS = 5;
+  const TOTAL_ROWS = 7;               // grid rows, including the partial last one
+  const ROWS_USED_LAST_ROW = 2;       // real frames in the final row
+  const FULL_ROWS = TOTAL_ROWS - 1;   // rows that are entirely real frames
+  const TOTAL_FRAMES = COLS * FULL_ROWS + ROWS_USED_LAST_ROW; // 32
+
+  // Scroll distance (in px) that advances exactly one frame. Tied to
+  // viewport height (a relative measure of the user's own screen)
+  // rather than a fixed pixel count, so the animation feels equally
+  // responsive on a small laptop and a large monitor.
+  function pxPerFrame() {
+    return Math.max(18, window.innerHeight * 0.012);
+  }
+
+  let frame = 0;
+  let lastScrollY = window.scrollY;
+  let carry = 0;          // sub-frame scroll remainder, carried between events
+  let ticking = false;
+
+  function applyFrame() {
+    const col = frame % COLS;
+    const row = Math.floor(frame / COLS);
+    // background-position as a percentage of the (COLS-1)/(ROWS-1) steps —
+    // this is what makes the step size relative to the container's own
+    // size (set via background-size: 500% 700% in CSS) instead of a
+    // fixed pixel offset, so it stays correct at any rendered size.
+    const xPct = (col / (COLS - 1)) * 100;
+    const yPct = (row / (TOTAL_ROWS - 1)) * 100;
+    sprite.style.backgroundPosition = xPct + '% ' + yPct + '%';
+  }
+
+  function update() {
+    const current = window.scrollY;
+    const delta = current - lastScrollY;
+    lastScrollY = current;
+
+    carry += delta;
+    const step = pxPerFrame();
+    const framesMoved = Math.trunc(carry / step);
+
+    if (framesMoved !== 0) {
+      carry -= framesMoved * step;
+      frame = ((frame + framesMoved) % TOTAL_FRAMES + TOTAL_FRAMES) % TOTAL_FRAMES;
+      applyFrame();
+    }
+    ticking = false;
+  }
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) { requestAnimationFrame(update); ticking = true; }
+  }, { passive: true });
+
+  applyFrame(); // paint frame 0 immediately, no waiting for first scroll
+})();
