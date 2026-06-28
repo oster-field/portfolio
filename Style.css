@@ -964,7 +964,7 @@ footer p { font-size: .7rem; color: var(--t3); }
   position: absolute;
   /* Extend 40% beyond top/bottom so parallax translateY never leaves a gap */
   top: -40%; bottom: -40%; left: 0; right: 0;
-  background: url('img/math.svg') 0 0 / 900px auto repeat;
+  background: url('img/math.png') 0 0 / 900px auto repeat;
   opacity: .09;
   filter: invert(1) sepia(1) saturate(2) hue-rotate(185deg);
   pointer-events: none; z-index: 0;
