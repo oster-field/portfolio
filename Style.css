@@ -1017,16 +1017,15 @@ footer p { font-size: .7rem; color: var(--t3); }
 ───────────────────────────────────────────────────── */
 @media (max-height: 500px) and (orientation: landscape) {
   .hero-photo-wrap {
-    /* Anchor to top of hero below nav — same as portrait */
     top: 3.25rem;
     bottom: auto;
-    /* Fill from nav down to ~60vh = just above the wave line (63vh).
-       This keeps the face visible while the shoulders dissolve into waves. */
-    height: calc(58vh - 3.25rem);
-    right: 0;
-    width: auto;
+    /* Width-based sizing for landscape:
+       right edge ≈ right end of "Tregubov" (~86% from left = 14vw from right)
+       width ≈ span from right end of "München, Germany" to right end of "Tregubov" (~26vw) */
+    right: 14vw;
+    width: 26vw;
+    height: auto;
     opacity: 0.85;
-    /* Top: soft fade from nav; bottom: dissolve into waves */
     -webkit-mask-image: linear-gradient(to bottom,
       transparent  0%,
       black        14%,
@@ -1040,7 +1039,8 @@ footer p { font-size: .7rem; color: var(--t3); }
   }
 
   .hero-photo {
-    height: 100%;
-    width: auto;
+    width: 100%;
+    height: auto;
+    display: block;
   }
 }
