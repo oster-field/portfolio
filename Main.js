@@ -883,7 +883,7 @@ setLang('en');
 })();
 
 /* ═══════════════════════════════════════════════════
-   EDUCATION — math.svg parallax (vertical only, no drift)
+   EDUCATION — math.png parallax (vertical only, no drift)
 ══════════════════════════════════════════════════════ */
 (function () {
   const bg = document.querySelector('.edu-bg-math');
