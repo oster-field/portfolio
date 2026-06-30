@@ -97,6 +97,27 @@ const T = {
 };
 
 let lang = 'en';
+/* Moves the liquid-glass droplet to sit exactly behind the active button
+   inside a given pill container. Reads live geometry so it works at any
+   font-size/zoom without hardcoded widths. */
+function positionDroplet(pillId, dropletId) {
+  const pill    = document.getElementById(pillId);
+  const droplet = document.getElementById(dropletId);
+  if (!pill || !droplet) return;
+  const activeBtn = pill.querySelector('.lang-btn.on');
+  if (!activeBtn) return;
+  // offsetWidth is 0 before first layout (e.g. setLang('en') called inline
+  // before window.load) — skip silently, window.load call will fix it
+  if (activeBtn.offsetWidth === 0) return;
+  droplet.style.left  = activeBtn.offsetLeft + 'px';
+  droplet.style.width = activeBtn.offsetWidth + 'px';
+}
+
+function positionAllDroplets() {
+  positionDroplet('lang-pill', 'lang-droplet');
+  positionDroplet('mob-lang-pill', 'mob-lang-droplet');
+}
+
 function setLang(l) {
   lang = l;
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('on', b.textContent === l.toUpperCase()));
@@ -105,7 +126,20 @@ function setLang(l) {
     if (v !== undefined) el.innerHTML = v;
   });
   document.documentElement.lang = l;
+  // Glide the droplet to the newly active button
+  positionAllDroplets();
 }
+
+// Keep droplet aligned on load and on viewport resize (font-size/layout shifts)
+window.addEventListener('load', () => {
+  // First positioning: snap instantly, no slide-in animation
+  document.querySelectorAll('.lang-droplet').forEach(d => d.style.transition = 'none');
+  positionAllDroplets();
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.lang-droplet').forEach(d => d.style.transition = '');
+  });
+});
+window.addEventListener('resize', positionAllDroplets, { passive: true });
 
 /* ═══════════════════════════════════════════════════
    MOBILE MENU
