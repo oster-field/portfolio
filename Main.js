@@ -15,6 +15,9 @@ const T = {
     btn_diploma:'View diploma',
     btn_ref:'View letter of recommendation',
     exp_ref_note:'Reference available on request',
+    exp_gap_role:'M.Sc. Completion &amp; Relocation',
+    exp_gap_period:'Nov 2024 – Present',
+    exp_gap_text:'Completing my M.Sc., relocating and integrating to Germany; reaching <strong>German B2–C1</strong> — alongside a part-time job (<a href="javascript:void(0)" class="exp-gap-link" onclick="openLightbox(\'lieferando\')">view reference</a>).',
     lb_dl:'Download',
     lb_close:'Close',
     lb_loading:'Loading…',
@@ -62,6 +65,9 @@ const T = {
     btn_diploma:'Diplom ansehen',
     btn_ref:'Empfehlungsschreiben ansehen',
     exp_ref_note:'Referenz auf Anfrage erhältlich',
+    exp_gap_role:'Masterabschluss &amp; Umzug',
+    exp_gap_period:'Nov 2024 – heute',
+    exp_gap_text:'Abschluss meines Masterstudiums, Umzug nach und Integration in Deutschland; Erreichen von <strong>Deutsch B2–C1</strong> — neben einem Nebenjob (<a href="javascript:void(0)" class="exp-gap-link" onclick="openLightbox(\'lieferando\')">Nachweis ansehen</a>).',
     lb_dl:'Herunterladen',
     lb_close:'Schließen',
     lb_loading:'Wird geladen…',
@@ -185,6 +191,10 @@ const LB_DOCS = {
   ref: {
     en: { type: 'Letter of Recommendation', title: 'Institute of Applied Physics · Russian Academy of Sciences', path: 'doc/IAP.pdf' },
     de: { type: 'Empfehlungsschreiben',      title: 'Institut für Angewandte Physik · Russische Akademie der Wissenschaften', path: 'doc/IAP.pdf' },
+  },
+  lieferando: {
+    en: { type: 'Reference Letter', title: 'Employment Reference', path: 'doc/lieferando.pdf' },
+    de: { type: 'Arbeitszeugnis',   title: 'Arbeitszeugnis',       path: 'doc/lieferando.pdf' },
   },
 };
 

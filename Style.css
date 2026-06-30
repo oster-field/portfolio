@@ -368,7 +368,7 @@ section { padding: clamp(5rem,10vw,9rem) 5vw; }
 }
 .exp-org-name { font-size: .7rem; font-weight: 400; letter-spacing: .1em; text-transform: uppercase; color: var(--cyan); margin-bottom: .35rem; }
 .exp-role { font-family: var(--serif); font-size: 1.75rem; font-weight: 300; color: var(--t1); }
-.exp-period { font-family: var(--mono); font-size: .7rem; color: var(--t3); white-space: nowrap; }
+.exp-period { font-family: var(--mono); font-size: .7rem; color: var(--t2); white-space: nowrap; }
 
 .exp-list { list-style: none; display: flex; flex-direction: column; gap: .85rem; }
 .exp-list li {
@@ -443,7 +443,7 @@ section { padding: clamp(5rem,10vw,9rem) 5vw; }
 .proj-desc { font-size: .8rem; font-weight: 300; line-height: 1.65; color: var(--t2); flex: 1; }
 .proj-tags { display: flex; flex-wrap: wrap; gap: .35rem; }
 .tag {
-  font-family: var(--mono); font-size: .62rem; color: var(--t3);
+  font-family: var(--mono); font-size: .62rem; color: var(--t2);
   background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
   border-radius: .25rem; padding: .18rem .48rem;
 }
@@ -531,7 +531,7 @@ footer {
   display: flex; align-items: center; justify-content: space-between;
   border-top: 1px solid rgba(255,255,255,.05);
 }
-footer p { font-size: .7rem; color: var(--t3); }
+footer p { font-size: .7rem; color: var(--t2); }
 
 /* ─────────────────────────────────────────────────────
    HERO PHOTO
@@ -845,8 +845,30 @@ footer p { font-size: .7rem; color: var(--t3); }
 }
 .exp-doc-note {
   margin: 0;
-  font-size: .74rem; color: var(--t3); font-weight: 300;
+  font-size: .74rem; color: var(--t2); font-weight: 300;
 }
+
+.exp-card--gap {
+  margin-top: 1.25rem;
+  padding: 1.75rem 2.5rem;
+  background: rgba(255,255,255,.01);
+}
+.exp-card--gap .exp-head {
+  padding-bottom: 0; margin-bottom: 1rem; border-bottom: none;
+}
+.exp-card--gap .exp-role { font-size: 1.3rem; }
+
+.exp-gap-text {
+  font-size: .85rem; font-weight: 300; line-height: 1.75;
+  color: var(--t2); margin: 0;
+}
+.exp-gap-text strong { color: var(--t1); font-weight: 500; }
+.exp-gap-link {
+  color: var(--cyan); text-decoration: underline;
+  text-underline-offset: 2px; cursor: pointer;
+  transition: color .2s;
+}
+.exp-gap-link:hover { color: var(--t1); }
 
 /* ─────────────────────────────────────────────────────
    LIGHTBOX
