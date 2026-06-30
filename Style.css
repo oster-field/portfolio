@@ -461,7 +461,8 @@ section { padding: clamp(5rem,10vw,9rem) 5vw; }
 .edu-dot { width: .9rem; height: .9rem; border-radius: 50%; border: 2px solid var(--cyan); background: var(--black); margin-top: .3rem; position: relative; z-index: 1; }
 .edu-deg { font-family: var(--serif); font-size: 1.15rem; font-weight: 400; color: var(--t1); margin-bottom: .22rem; }
 .edu-school { font-size: .8rem; color: var(--t2); margin-bottom: .22rem; }
-.edu-meta { font-family: var(--mono); font-size: .68rem; color: var(--t3); }
+.edu-meta { font-family: var(--mono); font-size: .68rem; color: var(--t1); }
+.edu-gpa  { font-weight: 700; color: var(--cyan); }
 
 /* ─────────────────────────────────────────────────────
    CONTACT
