@@ -443,10 +443,12 @@ section { padding: clamp(5rem,10vw,9rem) 5vw; }
 .proj-desc { font-size: .8rem; font-weight: 300; line-height: 1.65; color: var(--t2); flex: 1; }
 .proj-tags { display: flex; flex-wrap: wrap; gap: .35rem; }
 .tag {
+  display: inline-flex; align-items: center; gap: .35rem;
   font-family: var(--mono); font-size: .62rem; color: var(--t2);
   background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
-  border-radius: .25rem; padding: .18rem .48rem;
+  border-radius: .25rem; padding: .18rem .5rem .18rem .42rem;
 }
+.tag-ico { width: 12px; height: 12px; flex-shrink: 0; color: var(--cyan); opacity: .85; }
 
 /* ─────────────────────────────────────────────────────
    EDUCATION
