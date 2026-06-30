@@ -522,7 +522,6 @@ initViz('viz1', function(cv) {
 
   function draw() {
     cx.clearRect(0,0,W,H);
-    cx.fillStyle = '#111118'; cx.fillRect(0,0,W,H);
     const progress = Math.min(1, frame/55);
     const chartW = W-PAD.l-PAD.r, chartH = H-PAD.t-PAD.b;
     const bw = chartW / bins;
@@ -580,7 +579,7 @@ initViz('viz2', function(cv) {
 
   let frame=0;
   function draw() {
-    cx.clearRect(0,0,W,H); cx.fillStyle='#111118'; cx.fillRect(0,0,W,H);
+    cx.clearRect(0,0,W,H);
     const progress = Math.min(1, frame/65);
     const chartW = W-PAD.l-PAD.r, chartH = H-PAD.t-PAD.b;
 
