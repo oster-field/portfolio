@@ -14,6 +14,7 @@ const T = {
     about_cv:'View CV',
     btn_diploma:'View diploma',
     btn_ref:'View letter of recommendation',
+    exp_ref_note:'Reference available on request',
     lb_dl:'Download',
     lb_close:'Close',
     lb_loading:'Loading…',
@@ -60,6 +61,7 @@ const T = {
     about_cv:'Lebenslauf ansehen',
     btn_diploma:'Diplom ansehen',
     btn_ref:'Empfehlungsschreiben ansehen',
+    exp_ref_note:'Referenz auf Anfrage erhältlich',
     lb_dl:'Herunterladen',
     lb_close:'Schließen',
     lb_loading:'Wird geladen…',
@@ -97,17 +99,14 @@ const T = {
 };
 
 let lang = 'en';
-/* Moves the liquid-glass droplet to sit exactly behind the active button
-   inside a given pill container. Reads live geometry so it works at any
-   font-size/zoom without hardcoded widths. */
+// positions the droplet behind the active button
 function positionDroplet(pillId, dropletId) {
   const pill    = document.getElementById(pillId);
   const droplet = document.getElementById(dropletId);
   if (!pill || !droplet) return;
   const activeBtn = pill.querySelector('.lang-btn.on');
   if (!activeBtn) return;
-  // offsetWidth is 0 before first layout (e.g. setLang('en') called inline
-  // before window.load) — skip silently, window.load call will fix it
+  // skip if not yet laid out — window.load call retries
   if (activeBtn.offsetWidth === 0) return;
   droplet.style.left  = activeBtn.offsetLeft + 'px';
   droplet.style.width = activeBtn.offsetWidth + 'px';
@@ -130,13 +129,12 @@ function setLang(l) {
   positionAllDroplets();
 }
 
-// Keep droplet aligned on load and on viewport resize (font-size/layout shifts)
+// keep droplet aligned on load and resize
 window.addEventListener('load', () => {
-  // First positioning: snap instantly, no slide-in animation
+  // snap instantly on first paint, no slide-in
   document.querySelectorAll('.lang-droplet').forEach(d => d.style.transition = 'none');
   positionAllDroplets();
-  // iOS Safari can report offsetWidth:0 at the exact load tick while the
-  // address bar is still animating — retry once after layout settles.
+  // retry once — iOS can report width 0 during address-bar animation
   setTimeout(positionAllDroplets, 200);
   requestAnimationFrame(() => {
     document.querySelectorAll('.lang-droplet').forEach(d => d.style.transition = '');
@@ -646,7 +644,7 @@ window.addEventListener('scroll', () => {
   document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 55);
 }, {passive:true});
 
-// Initialise language state — syncs mobile menu .on class and document.lang on first load
+// initial language state on load
 setLang('en');
 
 /* ═══════════════════════════════════════════════════
@@ -678,11 +676,10 @@ setLang('en');
   const ctx = canvas.getContext('2d');
 
   let W = 0, H = 0, clipTop = 0, clipBot = 0;
-  let lastWidth = 0; // Cache width to bypass false iOS Safari resize events
+  let lastWidth = 0; // ignore false iOS resize events on unchanged width
   let seeds = [];
   let isVisible = false;
 
-  // Narrowed strict site palette matching your core UI design tokens
   const COLOR_PALETTE = [
     { r: 0,   g: 199, b: 255, baseAlpha: 0.38 }, // cyan  — nebula core colour
     { r: 60,  g: 140, b: 255, baseAlpha: 0.28 }, // blue  — mid cloud
@@ -714,7 +711,6 @@ setLang('en');
     const areaHeight = clipBot - clipTop;
     const canvasArea = W * areaHeight;
 
-    /* 💡 DENSITY MULTIPLIER CONTROL */
     const DENSITY_MULTIPLIER = 3.14;
 
     const count = Math.floor((canvasArea / 2800) * DENSITY_MULTIPLIER);
@@ -904,14 +900,14 @@ setLang('en');
   });
 
   window.addEventListener('resize', () => {
-    // Prevent execution if visual width hasn't changed (blocks dynamic address bar updates in mobile browsers)
+    // skip if width unchanged — ignores mobile address-bar resize events
     if (canvas.offsetWidth === lastWidth) return;
 
     if (isVisible) {
       init();
       draw(getProgress());
     } else {
-      // Force layout reconstruction on next scroll intersection if resized while out of view
+      // rebuild on next intersection if resized while off-screen
       seeds = [];
     }
   });
@@ -972,10 +968,8 @@ setLang('en');
   const FULL_ROWS = TOTAL_ROWS - 1;   // rows that are entirely real frames
   const TOTAL_FRAMES = COLS * FULL_ROWS + ROWS_USED_LAST_ROW; // 32
 
-  // Scroll distance (in px) that advances exactly one frame. Tied to
-  // viewport height (a relative measure of the user's own screen)
-  // rather than a fixed pixel count, so the animation feels equally
-  // responsive on a small laptop and a large monitor.
+  // scroll distance per frame, tied to viewport height so pacing
+  // feels consistent across screen sizes
   function pxPerFrame() {
     return Math.max(18, window.innerHeight * 0.012);
   }

@@ -53,7 +53,7 @@ body {
 }
 #nav.scrolled .nav-logo { opacity: 1; }
 
-/* Cosmic sprite glow behind the "AT" logo. Sized in em relative to the
+/* glow behind the "AT" logo, sized in em relative to the
    logo's own font-size (1rem here, but the wrap inherits the logo's
    computed size so it scales if .nav-logo's font-size ever changes via
    a media query) — never a fixed px box. The sheet is a 5x7 grid of
@@ -68,7 +68,7 @@ body {
 }
 .nav-logo-sprite {
   position: absolute;
-  /* Square container slightly larger than the glyph box, in em so it
+  /* container slightly larger than the glyph box, in em so it
      tracks the logo's font-size at any breakpoint. */
   width: 2.6em; height: 2.6em;
   left: 50%; top: 50%;
@@ -81,7 +81,7 @@ body {
   background-repeat: no-repeat;
   background-position: 0% 0%;
   mix-blend-mode: screen;
-  /* The circular shape with its soft, feathered edge is baked directly
+  /* circular shape with soft feathered edge is baked directly
      into each frame's own alpha channel in img/sprite.png — not built
      here via mask-image/border-radius. A CSS mask-image radial-gradient
      was tried first but behaved inconsistently (rendered as a square in
@@ -109,13 +109,11 @@ body {
   border: 1px solid rgba(255,255,255,.1);
   border-radius: 2rem; padding: .18rem .28rem;
 }
-/* The "droplet" — a separate glass capsule that glides between EN/DE.
-   Position/width set via JS (left + width in px), so it always matches
-   the exact size of the active button. */
+/* glass capsule that glides between EN/DE, position set via JS */
 .lang-droplet {
   position: absolute;
   top: .18rem; bottom: .18rem; left: .28rem;
-  width: 2.2rem;  /* fallback, overridden by JS */
+  width: 2.2rem;  /* overridden by JS */
   border-radius: 1rem;
   background: linear-gradient(155deg, rgba(255,255,255,.16), rgba(255,255,255,.06));
   border: 1px solid rgba(255,255,255,.2);
@@ -130,9 +128,7 @@ body {
 }
 .lang-btn {
   position: relative; z-index: 1;
-  /* Reset native button chrome — iOS Safari otherwise renders its own
-     rounded blue capsule behind <button> elements, which was bleeding
-     through our transparent droplet */
+  /* resets native iOS button chrome, which otherwise shows through */
   -webkit-appearance: none;
   appearance: none;
   -webkit-tap-highlight-color: transparent;
@@ -541,10 +537,10 @@ footer p { font-size: .7rem; color: var(--t3); }
 ───────────────────────────────────────────────────── */
 .hero-photo-wrap {
   position: absolute;
-  /* Bottom edge lands at lowest wave trough: baseY=63vh + max amp ~112px ≈ 24vh from bottom */
+  /* bottom edge lands at the lowest wave trough */
   bottom: 24vh;
   right: 5vw;
-  z-index: 1;           /* above bg, BEHIND canvas (z-index 2) */
+  z-index: 1;            /* behind canvas, above background */
   height: 76vh;
   width: auto;
   pointer-events: none;
@@ -843,6 +839,11 @@ footer p { font-size: .7rem; color: var(--t3); }
 .exp-doc-row {
   margin-top: 1.5rem; padding-top: 1.2rem;
   border-top: 1px solid rgba(255,255,255,.05);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap;
+}
+.exp-doc-note {
+  font-size: .76rem; color: var(--t3); font-weight: 300;
 }
 
 /* ─────────────────────────────────────────────────────
