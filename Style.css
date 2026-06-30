@@ -130,12 +130,20 @@ body {
 }
 .lang-btn {
   position: relative; z-index: 1;
+  /* Reset native button chrome — iOS Safari otherwise renders its own
+     rounded blue capsule behind <button> elements, which was bleeding
+     through our transparent droplet */
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
   font-size: .68rem; font-weight: 500; letter-spacing: .06em;
   padding: .2rem .52rem; border-radius: 1rem;
-  border: none; background: transparent;
+  border: none; background: transparent; box-shadow: none;
   color: rgba(245,245,247,.45); cursor: pointer;
   font-family: var(--sans);
   transition: color .25s ease;
+  white-space: nowrap;
 }
 .lang-btn.on { color: #fff; }
 

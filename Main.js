@@ -135,6 +135,9 @@ window.addEventListener('load', () => {
   // First positioning: snap instantly, no slide-in animation
   document.querySelectorAll('.lang-droplet').forEach(d => d.style.transition = 'none');
   positionAllDroplets();
+  // iOS Safari can report offsetWidth:0 at the exact load tick while the
+  // address bar is still animating — retry once after layout settles.
+  setTimeout(positionAllDroplets, 200);
   requestAnimationFrame(() => {
     document.querySelectorAll('.lang-droplet').forEach(d => d.style.transition = '');
   });
