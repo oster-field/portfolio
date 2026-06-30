@@ -189,8 +189,8 @@ const LB_DOCS = {
     de: { type: 'Akademisches Diplom', title: 'Bachelor of Science · Fundamental Mathematics · Higher School of Economics', path: 'doc/bsc.pdf' },
   },
   ref: {
-    en: { type: 'Letter of Recommendation', title: 'Institute of Applied Physics · Russian Academy of Sciences', path: 'doc/IAP.pdf' },
-    de: { type: 'Empfehlungsschreiben',      title: 'Institut für Angewandte Physik · Russische Akademie der Wissenschaften', path: 'doc/IAP.pdf' },
+    en: { type: 'Letter of Recommendation', title: 'Institute of Applied Physics · Academy of Sciences', path: 'doc/IAP.pdf' },
+    de: { type: 'Empfehlungsschreiben',      title: 'Institut für Angewandte Physik · Akademie der Wissenschaften', path: 'doc/IAP.pdf' },
   },
   lieferando: {
     en: { type: 'Reference Letter', title: 'Employment Reference', path: 'doc/lieferando.pdf' },
