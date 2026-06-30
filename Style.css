@@ -843,7 +843,8 @@ footer p { font-size: .7rem; color: var(--t3); }
   gap: 1rem; flex-wrap: wrap;
 }
 .exp-doc-note {
-  font-size: .76rem; color: var(--t3); font-weight: 300;
+  margin: 0;
+  font-size: .74rem; color: var(--t3); font-weight: 300;
 }
 
 /* ─────────────────────────────────────────────────────
