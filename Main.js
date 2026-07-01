@@ -600,7 +600,7 @@ initViz('viz2', function(cv) {
 
   // ── Animation state ──────────────────────────────────────────────────────
   let raf, startTs = null, lastDraw = 0, cancelled = false;
-  const HALF_S  = 9;            // seconds for one half-cycle (-10→+10)
+  const HALF_S  = 8.5;            // seconds for one half-cycle (-10→+10)
   const FRAME   = 1000 / 30;   // 30 FPS cap
 
   function draw(ts) {
@@ -625,7 +625,7 @@ initViz('viz2', function(cv) {
     // ── Grid (vertical + horizontal, no numbers) ─────────────────────────
     cx.lineWidth = 0.65; cx.setLineDash([1, 5]);
 
-    cx.strokeStyle = 'rgba(255,255,255,0.038)';
+    cx.strokeStyle = 'rgba(255,255,255,0.35)';
     for (let i = 1; i < 7; i++) {
       const y = pt + (i / 7) * cH;
       cx.beginPath(); cx.moveTo(pl, y); cx.lineTo(pl + cW, y); cx.stroke();
@@ -695,10 +695,10 @@ initViz('viz2', function(cv) {
     // ── Glow at crest ────────────────────────────────────────────────────
     if (focus > 0.28) {
       const gx = toX(peakIdx), gy = toY(ys[peakIdx]);
-      const gr = cx.createRadialGradient(gx, gy, 0, gx, gy, 95 * focus);
+      const gr = cx.createRadialGradient(gx, gy, 0, gx, gy, 65 * focus);
       const a  = (focus - 0.28) * 0.65;
-      gr.addColorStop(0, `rgba(0,199,255,${a})`);
-      gr.addColorStop(0.45, `rgba(0,113,227,${a * 0.28})`);
+      gr.addColorStop(0, `rgba(255,90,40,${a})`);
+      gr.addColorStop(0.45, `rgba(200,40,20,${a * 0.28})`);
       gr.addColorStop(1, 'rgba(0,0,0,0)');
       cx.save();
       cx.beginPath(); cx.rect(pl, pt, cW, cH); cx.clip();
