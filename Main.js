@@ -573,35 +573,78 @@ initViz('viz1', function(cv) {
   draw();
 });
 
-/* Viz 2 — Dispersive wave-packet focusing (Animation.py physics, ping-pong loop) */
+/* Viz 2 — Dispersive wave-packet focusing
+   Physics: direct port of Animation.py  |  Optimisation: phasor rotation (no per-point trig)
+   Entrance: wave grows from x-axis like viz1 bars  |  Loop: ping-pong (no restart jump) */
 initViz('viz2', function(cv) {
   const cx = cv.getContext('2d');
 
-  // ── Physics (exact port of Animation.py) ────────────────────────────────
+  // ── Physics constants (Animation.py) ────────────────────────────────────
   const l = 2 * Math.sqrt(2), s = 200, g = 9.8;
   const XMIN = -75, XMAX = 75, T0 = -10, T1 = 10;
+  const NPTS = 220;
+  const dx   = (XMAX - XMIN) / NPTS;
 
-  const H = [];
+  // Build harmonic table
+  const Hkn = [], Hwn = [], Han = [];
   for (let n = 1; n <= 350; n++) {
     const kn = Math.PI * n / s;
-    const wn = Math.sqrt(g * kn);
     const An = 2 * Math.sin(n * l * Math.PI * Math.sqrt(2 * Math.PI) / (4 * s)) / (n * Math.PI);
-    if (Math.abs(An) > 5e-5) H.push([kn, wn, An]);
+    if (Math.abs(An) > 5e-5) { Hkn.push(kn); Hwn.push(Math.sqrt(g * kn)); Han.push(An); }
+  }
+  const HL = Hkn.length;
+
+  // Pre-compute phasor step rotations (fixed for all frames — dx never changes)
+  const cosDel = new Float32Array(HL);
+  const sinDel = new Float32Array(HL);
+  for (let i = 0; i < HL; i++) {
+    cosDel[i] = Math.cos(-Hkn[i] * dx);
+    sinDel[i] = Math.sin(-Hkn[i] * dx);
   }
 
-  // Max amplitude = sum |An| at focus point (t=0, x=0)
-  const ampMax = H.reduce((s, h) => s + Math.abs(h[2]), 0) * 0.88;
+  // Working arrays (reused each frame)
+  const cosP = new Float32Array(HL);
+  const sinP = new Float32Array(HL);
+  const ys   = new Float32Array(NPTS + 1);
+  const envs = new Float32Array(NPTS + 1);   // analytic envelope |signal|
 
-  function surface(x, t) {
-    let y = 0;
-    for (let i = 0; i < H.length; i++) y += H[i][2] * Math.cos(H[i][1]*t - H[i][0]*x);
-    return y;
+  const ampMax = Han.reduce((a, v) => a + Math.abs(v), 0) * 0.88;
+
+  function computeSurface(tEff) {
+    for (let i = 0; i < HL; i++) {
+      const phi = Hwn[i] * tEff - Hkn[i] * XMIN;
+      cosP[i] = Math.cos(phi);
+      sinP[i] = Math.sin(phi);
+    }
+    let peakVal = -Infinity, peakIdx = 0;
+    for (let xi = 0; xi <= NPTS; xi++) {
+      let yR = 0, yI = 0;
+      for (let i = 0; i < HL; i++) {
+        yR += Han[i] * cosP[i];
+        yI += Han[i] * sinP[i];   // quadrature: free via phasor
+        const c = cosP[i] * cosDel[i] - sinP[i] * sinDel[i];
+        sinP[i] = sinP[i] * cosDel[i] + cosP[i] * sinDel[i];
+        cosP[i] = c;
+      }
+      ys[xi]   = yR;
+      envs[xi] = Math.sqrt(yR * yR + yI * yI);   // |analytic signal|
+      if (yR > peakVal) { peakVal = yR; peakIdx = xi; }
+    }
+    return { peakVal, peakIdx };
+  }
+
+  // ── Axis arrow helper (defined once, not per-frame) ──────────────────────
+  function arrowHead(x, y, angle) {
+    cx.save(); cx.translate(x, y); cx.rotate(angle);
+    cx.beginPath(); cx.moveTo(0,0); cx.lineTo(-6,-2.5); cx.lineTo(-6,2.5); cx.closePath();
+    cx.fillStyle = 'rgba(245,245,247,0.15)'; cx.fill(); cx.restore();
   }
 
   // ── Animation state ──────────────────────────────────────────────────────
   let raf, startTs = null, lastDraw = 0, cancelled = false;
-  const HALF_S  = 8.5;            // seconds for one half-cycle (-10→+10)
-  const FRAME   = 1000 / 30;   // 30 FPS cap
+  const HALF_S   = 8.5;
+  const FRAME    = 1000 / 30;
+  const REVEAL_S = 0.85;
 
   function draw(ts) {
     if (cancelled) return;
@@ -610,21 +653,27 @@ initViz('viz2', function(cv) {
     lastDraw = ts;
     if (!startTs) startTs = ts;
 
-    // Ping-pong: forward then reverse, no jump restart
-    const cycle  = ((ts - startTs) / 1000) % (2 * HALF_S);
-    const frac   = cycle < HALF_S ? cycle / HALF_S : 2 - cycle / HALF_S;
-    const tEff   = T0 + (T1 - T0) * frac;
+    const elapsed = (ts - startTs) / 1000;
+    const reveal  = Math.min(1, elapsed / REVEAL_S);
+
+    const cycle   = elapsed % (2 * HALF_S);
+    const frac    = cycle < HALF_S ? cycle / HALF_S : 2 - cycle / HALF_S;
+    const tEff    = T0 + (T1 - T0) * frac;
+    const isFocusing = cycle < HALF_S;   // for phase arrow direction
 
     const W = cv.width, Hc = cv.height;
     const pl = 36, pr = 22, pt = 22, pb = 30;
     const cW = W - pl - pr, cH = Hc - pt - pb;
     const midY = pt + cH * 0.54;
 
+    const toX  = i => pl + (i / NPTS) * cW;
+    const toY  = v => midY - (v / ampMax) * cH * 0.40 * reveal;
+    const toYe = v => midY - (v / ampMax) * cH * 0.40 * reveal;  // same scale for envelope
+
     cx.clearRect(0, 0, W, Hc);
 
-    // ── Grid (vertical + horizontal, no numbers) ─────────────────────────
-    cx.lineWidth = 0.65; cx.setLineDash([1, 5]);
-
+    // ── Grid ─────────────────────────────────────────────────────────────
+    cx.lineWidth = 0.6; cx.setLineDash([1, 5]);
     cx.strokeStyle = 'rgba(255,255,255,0.35)';
     for (let i = 1; i < 7; i++) {
       const y = pt + (i / 7) * cH;
@@ -637,85 +686,134 @@ initViz('viz2', function(cv) {
     cx.setLineDash([]);
 
     // ── Axes ─────────────────────────────────────────────────────────────
-    // X baseline (y=0 surface)
+    cx.lineWidth = 0.85;
     cx.beginPath(); cx.moveTo(pl, midY); cx.lineTo(pl + cW, midY);
-    cx.strokeStyle = 'rgba(245,245,247,0.11)'; cx.lineWidth = 0.85; cx.stroke();
-
-    // Y axis
+    cx.strokeStyle = 'rgba(245,245,247,0.12)'; cx.stroke();
     cx.beginPath(); cx.moveTo(pl, pt); cx.lineTo(pl, pt + cH);
-    cx.strokeStyle = 'rgba(245,245,247,0.09)'; cx.lineWidth = 0.85; cx.stroke();
+    cx.strokeStyle = 'rgba(245,245,247,0.09)'; cx.stroke();
+    arrowHead(pl + cW, midY, 0);
+    arrowHead(pl, pt, -Math.PI / 2);
 
-    // Axis arrow heads (tiny triangles at ends)
-    function arrowHead(x, y, dx, dy) {
-      cx.save(); cx.translate(x, y); cx.rotate(Math.atan2(dy, dx));
-      cx.beginPath(); cx.moveTo(0,0); cx.lineTo(-6,-2.5); cx.lineTo(-6,2.5); cx.closePath();
-      cx.fillStyle = 'rgba(245,245,247,0.13)'; cx.fill(); cx.restore();
-    }
-    arrowHead(pl + cW, midY, 1, 0);   // →
-    arrowHead(pl, pt, 0, -1);         // ↑
-
-    // Tick marks
-    cx.strokeStyle = 'rgba(245,245,247,0.11)'; cx.lineWidth = 0.8;
+    cx.strokeStyle = 'rgba(245,245,247,0.10)'; cx.lineWidth = 0.8;
     for (let i = 0; i <= 8; i++) {
       const x = pl + (i / 8) * cW;
-      cx.beginPath(); cx.moveTo(x, midY - 4); cx.lineTo(x, midY + 4); cx.stroke();
+      cx.beginPath(); cx.moveTo(x, midY - 3.5); cx.lineTo(x, midY + 3.5); cx.stroke();
     }
     for (let i = 0; i <= 5; i++) {
       const y = pt + (i / 5) * cH;
-      cx.beginPath(); cx.moveTo(pl - 4, y); cx.lineTo(pl + 4, y); cx.stroke();
+      cx.beginPath(); cx.moveTo(pl - 3.5, y); cx.lineTo(pl + 3.5, y); cx.stroke();
     }
 
-    // ── Compute wave samples ─────────────────────────────────────────────
-    const NPTS = 220;
-    const ys = new Float32Array(NPTS + 1);
-    let peakVal = -Infinity, peakIdx = 0;
-    for (let i = 0; i <= NPTS; i++) {
-      const x = XMIN + (XMAX - XMIN) * (i / NPTS);
-      ys[i] = surface(x, tEff);
-      if (ys[i] > peakVal) { peakVal = ys[i]; peakIdx = i; }
-    }
+    // ── Physics ──────────────────────────────────────────────────────────
+    const { peakVal, peakIdx } = computeSurface(tEff);
     const focus = Math.max(0, Math.min(1, peakVal / ampMax));
 
-    const toX = i => pl + (i / NPTS) * cW;
-    const toY = v => midY - (v / ampMax) * cH * 0.40;
+    // ── 2. HOT ZONE — warm vertical band at peak, behind wave ─────────────
+    if (focus > 0.35 && reveal > 0.4) {
+      const peakPx   = toX(peakIdx);
+      const halfBand = (40 + 60 * focus);
+      const zg = cx.createLinearGradient(peakPx - halfBand, 0, peakPx + halfBand, 0);
+      const za = (focus - 0.35) * 0.28 * reveal;
+      zg.addColorStop(0,    'rgba(0,0,0,0)');
+      zg.addColorStop(0.38, `rgba(255,70,20,${za * 0.5})`);
+      zg.addColorStop(0.5,  `rgba(255,80,30,${za})`);
+      zg.addColorStop(0.62, `rgba(255,70,20,${za * 0.5})`);
+      zg.addColorStop(1,    'rgba(0,0,0,0)');
+      cx.save();
+      cx.beginPath(); cx.rect(pl, pt, cW, cH); cx.clip();
+      cx.fillStyle = zg; cx.fillRect(pl, pt, cW, cH);
+      cx.restore();
+    }
 
-    // ── Fill area under curve (scientific waveform) ──────────────────────
+    // ── Fill under wave ───────────────────────────────────────────────────
     cx.beginPath();
     cx.moveTo(toX(0), midY);
     for (let i = 0; i <= NPTS; i++) cx.lineTo(toX(i), toY(ys[i]));
     cx.lineTo(toX(NPTS), midY);
     cx.closePath();
-    const fillGrad = cx.createLinearGradient(0, midY - cH * 0.40, 0, midY);
-    fillGrad.addColorStop(0, `rgba(0,199,255,${0.07 + focus * 0.12})`);
-    fillGrad.addColorStop(0.7, `rgba(0,113,227,${0.02 + focus * 0.04})`);
-    fillGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    cx.fillStyle = fillGrad;
-    cx.fill();
+    const fillG = cx.createLinearGradient(0, toY(ampMax), 0, midY);
+    fillG.addColorStop(0,    `rgba(0,199,255,${(0.06 + focus * 0.10) * reveal})`);
+    fillG.addColorStop(0.65, `rgba(0,113,227,${(0.02 + focus * 0.04) * reveal})`);
+    fillG.addColorStop(1,    'rgba(0,0,0,0)');
+    cx.fillStyle = fillG; cx.fill();
 
-    // ── Glow at crest ────────────────────────────────────────────────────
-    if (focus > 0.28) {
+    // ── 1. ENVELOPE — analytic |signal|, dashed, above & below ───────────
+    if (reveal > 0.2) {
+      const envAlpha = 0.28 * reveal;
+      cx.setLineDash([4, 6]);
+      cx.lineWidth = 0.9;
+      cx.strokeStyle = `rgba(0,199,255,${envAlpha})`;
+
+      // Upper envelope
+      cx.beginPath();
+      for (let i = 0; i <= NPTS; i++) {
+        const px = toX(i), py = toYe(envs[i]);
+        i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
+      }
+      cx.stroke();
+
+      // Lower envelope (mirror)
+      cx.beginPath();
+      for (let i = 0; i <= NPTS; i++) {
+        const px = toX(i), py = midY + (envs[i] / ampMax) * cH * 0.40 * reveal;
+        i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
+      }
+      cx.stroke();
+      cx.setLineDash([]);
+    }
+
+    // ── Glow at crest ─────────────────────────────────────────────────────
+    if (focus > 0.28 && reveal > 0.5) {
       const gx = toX(peakIdx), gy = toY(ys[peakIdx]);
-      const gr = cx.createRadialGradient(gx, gy, 0, gx, gy, 65 * focus);
-      const a  = (focus - 0.28) * 0.65;
-      gr.addColorStop(0, `rgba(255,90,40,${a})`);
+      const gr = cx.createRadialGradient(gx, gy, 0, gx, gy, 80 * focus);
+      const a  = (focus - 0.28) * 0.55 * reveal;
+      gr.addColorStop(0,    `rgba(255,90,40,${a})`);
       gr.addColorStop(0.45, `rgba(200,40,20,${a * 0.28})`);
-      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      gr.addColorStop(1,    'rgba(0,0,0,0)');
       cx.save();
       cx.beginPath(); cx.rect(pl, pt, cW, cH); cx.clip();
       cx.fillStyle = gr; cx.fillRect(pl, pt, cW, cH);
       cx.restore();
     }
 
-    // ── Wave line ────────────────────────────────────────────────────────
+    // ── Wave line ─────────────────────────────────────────────────────────
     cx.beginPath();
     for (let i = 0; i <= NPTS; i++) {
       const px = toX(i), py = toY(ys[i]);
       i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
     }
-    cx.strokeStyle = `rgba(0,199,255,${0.55 + focus * 0.42})`;
-    cx.lineWidth = 1.4 + focus * 1.4;
-    cx.lineJoin = 'round'; cx.lineCap = 'round';
+    cx.strokeStyle = `rgba(0,199,255,${(0.55 + focus * 0.42) * Math.max(0.3, reveal)})`;
+    cx.lineWidth   = 1.4 + focus * 1.4;
+    cx.lineJoin    = 'round'; cx.lineCap = 'round';
     cx.stroke();
+
+    // ── 3. PHASE INDICATOR — arrows in top-right corner ───────────────────
+    // isFocusing: two arrows pointing INWARD (→|←)  else OUTWARD (←|→)
+    const ax  = pl + cW - 6;   // right anchor
+    const ay  = pt + 10;       // top row
+    const gap = 14;             // gap between arrow pair
+    const arA = 0.55 * reveal;
+
+    function phaseArrow(x, y, pointRight) {
+      const d = pointRight ? 1 : -1;
+      cx.beginPath();
+      cx.moveTo(x, y);
+      cx.lineTo(x + d * 9, y - 3.5);
+      cx.lineTo(x + d * 9, y + 3.5);
+      cx.closePath();
+      cx.fillStyle = `rgba(255,90,40,${arA})`;
+      cx.fill();
+    }
+
+    if (isFocusing) {
+      // → ← (converging)
+      phaseArrow(ax - gap - 4, ay, true);
+      phaseArrow(ax + 4,       ay, false);
+    } else {
+      // ← → (diverging)
+      phaseArrow(ax - gap - 4, ay, false);
+      phaseArrow(ax + 4,       ay, true);
+    }
   }
 
   raf = requestAnimationFrame(draw);
