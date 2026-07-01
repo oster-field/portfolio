@@ -60,7 +60,7 @@ const T = {
     about_lbl:'Über mich',
     about_q_em:'Expertise mit nachgewiesener Wirkung',
     about_q_rest:' — der komplette Zyklus, von komplexer Mathematik bis zum produktiv eingesetzten Container. Über 3 Jahre Erfahrung in Forschung und Entwicklung von ML-Modellen.',
-    about_body:'Jedes Modell hat einen Punkt, an dem die Realität nicht mehr mit den Annahmen übereinstimmt. Ich vertraue seinem Ergebnis erst, wenn ich diesen Punkt gefunden habe — und der eigentlich interessante Teil ist nicht der Bau des Modells, sondern zu erkennen, wo es sich leise geirrt hat, zu beweisen, warum, und herauszufinden, wie man es behebt.',
+    about_body:'Jedes Modell hat einen Punkt, an dem die Realität nicht mehr mit den Annahmen übereinstimmt. Ich vertraue seinem Ergebnis erst, wenn ich diesen Punkt gefunden habe. Der eigentlich interessante Teil ist nicht der Bau des Modells, sondern zu erkennen, wo es sich unbemerkt geirrt hat, zu beweisen, warum, und herauszufinden, wie man es behebt.',
     about_cv:'Lebenslauf ansehen',
     btn_diploma:'Diplom ansehen',
     btn_ref:'Empfehlungsschreiben ansehen',
@@ -79,7 +79,7 @@ const T = {
     exp_org:'Institut für Angewandte Physik · Akademie der Wissenschaften',
     exp_role:'Data Scientist &amp; Research and Development Engineer',
     eb1:'Entwicklung von Sensor-Datenanwendungen in einem kleinen, interdisziplinären Forschungsteam — <strong>von der ersten Idee bis zur produktionsreifen</strong>, mathematisch verifizierten Lösung',
-    eb2:'Konzipierung einer <strong>Datenverarbeitungsmethodik</strong> zur Bereinigung und Merkmalsextraktion aus <strong>Dutzenden Gigabyte</strong> realer Zeitreihendaten aus Langzeit-Feldmessungen',
+    eb2:'Konzipierung einer <strong>Datenverarbeitungsmethodik</strong> zur Bereinigung und Merkmalsextraktion aus <strong>zahlreichen Gigabyte</strong> realer Zeitreihendaten aus Langzeit-Feldmessungen',
     eb3:'Entwicklung eines <strong>Modells zur prädiktiven Risikobewertung</strong>, das manuelle Prüfungen ersetzte und anschließend zur Verbesserung der Seesicherheit kommerzialisiert wurde',
     eb4:'Formulierung und Beweis eines mathematischen <strong>Theorems</strong> zur Wahrscheinlichkeitsschätzung seltener Ereignisse in stochastischen Zeitreihen',
     eb5:'Zwei persönliche Forschungsstipendien erhalten, das größte im Wert von <strong>130.000 €</strong>',
@@ -474,12 +474,14 @@ function initViz(id, drawFn) {
   let lastWidth = 0;
   let isVisible = false;
   let played    = false;
+  let stopFn    = null;   // drawFn may return a function to cancel its own RAF loop
 
   function start() {
     cv.width  = parent.offsetWidth;
     cv.height = parent.offsetHeight;
     lastWidth = cv.width;
-    drawFn(cv);
+    if (stopFn) { stopFn(); stopFn = null; }
+    stopFn = drawFn(cv) || null;
     played = true;
   }
 
@@ -491,8 +493,9 @@ function initViz(id, drawFn) {
     cv.width  = w;               // resetting .width clears canvas automatically
     cv.height = parent.offsetHeight;
     if (isVisible) {
-      drawFn(cv);                // real resize while visible → restart cleanly
+      start();                   // real resize while visible → restart cleanly
     } else {
+      if (stopFn) { stopFn(); stopFn = null; }
       played = false;            // real resize while off-screen → replay on next scroll-in
     }
   }
@@ -500,7 +503,12 @@ function initViz(id, drawFn) {
   // Observer stays connected (no disconnect) so isVisible stays accurate
   new IntersectionObserver(entries => {
     isVisible = entries[0].isIntersecting;
-    if (isVisible && !played) start(); // play once on first scroll-in
+    if (isVisible && !played) {
+      start();                   // first scroll-in → play
+    } else if (!isVisible && stopFn) {
+      stopFn(); stopFn = null;   // scrolled away → pause infinite loops (no-op for one-shot anims)
+      played = false;            // allow infinite loops to cleanly restart their phase on return
+    }
   }, { threshold: 0.25 }).observe(cv);
 
   window.addEventListener('resize', doResize, { passive: true });
@@ -565,54 +573,153 @@ initViz('viz1', function(cv) {
   draw();
 });
 
-/* Viz 2 — Finite ensemble distributions convergence */
+/* Viz 2 — Dispersive wave-packet focusing (Animation.py physics, ping-pong loop) */
 initViz('viz2', function(cv) {
   const cx = cv.getContext('2d');
-  const W = cv.width, H = cv.height;
-  const PAD = {l:40,r:20,t:30,b:28};
-  const steps = 90, xMax = 3.4;
-  const Ns = [4, 10, 25, 80, 300];
-  const clrs = ['rgba(255,95,70,.72)','rgba(255,185,45,.72)','rgba(60,215,100,.72)','rgba(0,180,255,.72)','rgba(200,160,255,.72)'];
 
-  function rayleigh(x) { return x*Math.exp(-x*x/2); }
-  function finite(x,n) { const r=rayleigh(x); return r*(1-Math.exp(-n*r*.75)); }
+  // ── Physics (exact port of Animation.py) ────────────────────────────────
+  const l = 2 * Math.sqrt(2), s = 200, g = 9.8;
+  const XMIN = -75, XMAX = 75, T0 = -10, T1 = 10;
 
-  let frame=0;
-  function draw() {
-    cx.clearRect(0,0,W,H);
-    const progress = Math.min(1, frame/65);
-    const chartW = W-PAD.l-PAD.r, chartH = H-PAD.t-PAD.b;
-
-    // Rayleigh reference (dashed)
-    cx.beginPath();
-    for (let i=0;i<=steps;i++) {
-      const x=i/steps*xMax, y=rayleigh(x);
-      const px=PAD.l+x/xMax*chartW, py=PAD.t+chartH-y*chartH*.9*progress;
-      i===0?cx.moveTo(px,py):cx.lineTo(px,py);
-    }
-    cx.strokeStyle='rgba(245,245,247,.18)'; cx.lineWidth=1; cx.setLineDash([3,4]); cx.stroke(); cx.setLineDash([]);
-
-    const show = Math.ceil(Ns.length*progress);
-    for (let e=0;e<show;e++) {
-      cx.beginPath();
-      for (let i=0;i<=steps;i++) {
-        const x=i/steps*xMax, y=finite(x,Ns[e]);
-        const px=PAD.l+x/xMax*chartW, py=PAD.t+chartH-y*chartH*.9;
-        i===0?cx.moveTo(px,py):cx.lineTo(px,py);
-      }
-      cx.strokeStyle=clrs[e]; cx.lineWidth=e===Ns.length-1?2:1.3; cx.stroke();
-    }
-
-    // Legend
-    cx.font='300 9px DM Sans, sans-serif'; cx.fillStyle='rgba(134,134,139,.7)';
-    cx.fillText('Finite ensemble distributions (N waves)',PAD.l,PAD.t-12);
-    cx.fillStyle='rgba(134,134,139,.45)'; cx.fillText('0',PAD.l-10,PAD.t+chartH+14);
-    cx.fillText('h/σ',PAD.l+chartW,PAD.t+chartH+14);
-
-    frame++;
-    if (frame<120) requestAnimationFrame(draw);
+  const H = [];
+  for (let n = 1; n <= 350; n++) {
+    const kn = Math.PI * n / s;
+    const wn = Math.sqrt(g * kn);
+    const An = 2 * Math.sin(n * l * Math.PI * Math.sqrt(2 * Math.PI) / (4 * s)) / (n * Math.PI);
+    if (Math.abs(An) > 5e-5) H.push([kn, wn, An]);
   }
-  draw();
+
+  // Max amplitude = sum |An| at focus point (t=0, x=0)
+  const ampMax = H.reduce((s, h) => s + Math.abs(h[2]), 0) * 0.88;
+
+  function surface(x, t) {
+    let y = 0;
+    for (let i = 0; i < H.length; i++) y += H[i][2] * Math.cos(H[i][1]*t - H[i][0]*x);
+    return y;
+  }
+
+  // ── Animation state ──────────────────────────────────────────────────────
+  let raf, startTs = null, lastDraw = 0, cancelled = false;
+  const HALF_S  = 9;            // seconds for one half-cycle (-10→+10)
+  const FRAME   = 1000 / 30;   // 30 FPS cap
+
+  function draw(ts) {
+    if (cancelled) return;
+    raf = requestAnimationFrame(draw);
+    if (ts - lastDraw < FRAME) return;
+    lastDraw = ts;
+    if (!startTs) startTs = ts;
+
+    // Ping-pong: forward then reverse, no jump restart
+    const cycle  = ((ts - startTs) / 1000) % (2 * HALF_S);
+    const frac   = cycle < HALF_S ? cycle / HALF_S : 2 - cycle / HALF_S;
+    const tEff   = T0 + (T1 - T0) * frac;
+
+    const W = cv.width, Hc = cv.height;
+    const pl = 36, pr = 22, pt = 22, pb = 30;
+    const cW = W - pl - pr, cH = Hc - pt - pb;
+    const midY = pt + cH * 0.54;
+
+    cx.clearRect(0, 0, W, Hc);
+
+    // ── Grid (vertical + horizontal, no numbers) ─────────────────────────
+    cx.lineWidth = 0.65; cx.setLineDash([1, 5]);
+
+    cx.strokeStyle = 'rgba(255,255,255,0.038)';
+    for (let i = 1; i < 7; i++) {
+      const y = pt + (i / 7) * cH;
+      cx.beginPath(); cx.moveTo(pl, y); cx.lineTo(pl + cW, y); cx.stroke();
+    }
+    for (let i = 1; i < 9; i++) {
+      const x = pl + (i / 9) * cW;
+      cx.beginPath(); cx.moveTo(x, pt); cx.lineTo(x, pt + cH); cx.stroke();
+    }
+    cx.setLineDash([]);
+
+    // ── Axes ─────────────────────────────────────────────────────────────
+    // X baseline (y=0 surface)
+    cx.beginPath(); cx.moveTo(pl, midY); cx.lineTo(pl + cW, midY);
+    cx.strokeStyle = 'rgba(245,245,247,0.11)'; cx.lineWidth = 0.85; cx.stroke();
+
+    // Y axis
+    cx.beginPath(); cx.moveTo(pl, pt); cx.lineTo(pl, pt + cH);
+    cx.strokeStyle = 'rgba(245,245,247,0.09)'; cx.lineWidth = 0.85; cx.stroke();
+
+    // Axis arrow heads (tiny triangles at ends)
+    function arrowHead(x, y, dx, dy) {
+      cx.save(); cx.translate(x, y); cx.rotate(Math.atan2(dy, dx));
+      cx.beginPath(); cx.moveTo(0,0); cx.lineTo(-6,-2.5); cx.lineTo(-6,2.5); cx.closePath();
+      cx.fillStyle = 'rgba(245,245,247,0.13)'; cx.fill(); cx.restore();
+    }
+    arrowHead(pl + cW, midY, 1, 0);   // →
+    arrowHead(pl, pt, 0, -1);         // ↑
+
+    // Tick marks
+    cx.strokeStyle = 'rgba(245,245,247,0.11)'; cx.lineWidth = 0.8;
+    for (let i = 0; i <= 8; i++) {
+      const x = pl + (i / 8) * cW;
+      cx.beginPath(); cx.moveTo(x, midY - 4); cx.lineTo(x, midY + 4); cx.stroke();
+    }
+    for (let i = 0; i <= 5; i++) {
+      const y = pt + (i / 5) * cH;
+      cx.beginPath(); cx.moveTo(pl - 4, y); cx.lineTo(pl + 4, y); cx.stroke();
+    }
+
+    // ── Compute wave samples ─────────────────────────────────────────────
+    const NPTS = 220;
+    const ys = new Float32Array(NPTS + 1);
+    let peakVal = -Infinity, peakIdx = 0;
+    for (let i = 0; i <= NPTS; i++) {
+      const x = XMIN + (XMAX - XMIN) * (i / NPTS);
+      ys[i] = surface(x, tEff);
+      if (ys[i] > peakVal) { peakVal = ys[i]; peakIdx = i; }
+    }
+    const focus = Math.max(0, Math.min(1, peakVal / ampMax));
+
+    const toX = i => pl + (i / NPTS) * cW;
+    const toY = v => midY - (v / ampMax) * cH * 0.40;
+
+    // ── Fill area under curve (scientific waveform) ──────────────────────
+    cx.beginPath();
+    cx.moveTo(toX(0), midY);
+    for (let i = 0; i <= NPTS; i++) cx.lineTo(toX(i), toY(ys[i]));
+    cx.lineTo(toX(NPTS), midY);
+    cx.closePath();
+    const fillGrad = cx.createLinearGradient(0, midY - cH * 0.40, 0, midY);
+    fillGrad.addColorStop(0, `rgba(0,199,255,${0.07 + focus * 0.12})`);
+    fillGrad.addColorStop(0.7, `rgba(0,113,227,${0.02 + focus * 0.04})`);
+    fillGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    cx.fillStyle = fillGrad;
+    cx.fill();
+
+    // ── Glow at crest ────────────────────────────────────────────────────
+    if (focus > 0.28) {
+      const gx = toX(peakIdx), gy = toY(ys[peakIdx]);
+      const gr = cx.createRadialGradient(gx, gy, 0, gx, gy, 95 * focus);
+      const a  = (focus - 0.28) * 0.65;
+      gr.addColorStop(0, `rgba(0,199,255,${a})`);
+      gr.addColorStop(0.45, `rgba(0,113,227,${a * 0.28})`);
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      cx.save();
+      cx.beginPath(); cx.rect(pl, pt, cW, cH); cx.clip();
+      cx.fillStyle = gr; cx.fillRect(pl, pt, cW, cH);
+      cx.restore();
+    }
+
+    // ── Wave line ────────────────────────────────────────────────────────
+    cx.beginPath();
+    for (let i = 0; i <= NPTS; i++) {
+      const px = toX(i), py = toY(ys[i]);
+      i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
+    }
+    cx.strokeStyle = `rgba(0,199,255,${0.55 + focus * 0.42})`;
+    cx.lineWidth = 1.4 + focus * 1.4;
+    cx.lineJoin = 'round'; cx.lineCap = 'round';
+    cx.stroke();
+  }
+
+  raf = requestAnimationFrame(draw);
+  return () => { cancelled = true; cancelAnimationFrame(raf); };
 });
 
 /* ═══════════════════════════════════════════════════
