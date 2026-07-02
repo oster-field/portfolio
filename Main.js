@@ -580,7 +580,7 @@ initViz('viz2', function(cv) {
 
   // ── Physics constants ────────────────────────────────────────────────────
   const l = 2 * Math.sqrt(2), s = 200, g = 9.8;
-  const XMIN = -75, XMAX = 75, T0 = -10, T1 = 10;
+  const XMIN = -52, XMAX = 52, T0 = -10, T1 = 10;
   const NPTS = 220;
   const dx   = (XMAX - XMIN) / NPTS;
 
@@ -706,8 +706,8 @@ initViz('viz2', function(cv) {
     const d = pointRight ? 1 : -1;
     cx.beginPath();
     cx.moveTo(x, y);
-    cx.lineTo(x + d * 9, y - 3.5);
-    cx.lineTo(x + d * 9, y + 3.5);
+    cx.lineTo(x + d * 13, y - 5);
+    cx.lineTo(x + d * 13, y + 5);
     cx.closePath();
     cx.fillStyle = `rgba(255,90,40,${alpha})`;
     cx.fill();
@@ -744,7 +744,7 @@ initViz('viz2', function(cv) {
 
     const toX = i => pl + (i / NPTS) * cW;
     // OPT 3: toYe removed — single toY used everywhere
-    const toY = v => midY - (v / ampMax) * cH * 0.40 * reveal;
+    const toY = v => midY - (v / ampMax) * cH * 0.46 * reveal;
 
     const cycle      = elapsed % (2 * HALF_S);
     const frac       = cycle < HALF_S ? cycle / HALF_S : 2 - cycle / HALF_S;
@@ -805,7 +805,7 @@ initViz('viz2', function(cv) {
 
       cx.beginPath();
       for (let i = 0; i <= NPTS; i++) {
-        const px = toX(i), py = midY + (envs[i] / ampMax) * cH * 0.40 * reveal;
+        const px = toX(i), py = midY + (envs[i] / ampMax) * cH * 0.46 * reveal;
         i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
       }
       cx.stroke();
@@ -826,27 +826,40 @@ initViz('viz2', function(cv) {
       cx.restore();
     }
 
-    // ── Wave line ─────────────────────────────────────────────────────────
+    // ── Wave — 3-pass Liquid Glass ────────────────────────────────────────
+    // Build the path once, stroke three times: outer halo → body → specular core
     cx.beginPath();
     for (let i = 0; i <= NPTS; i++) {
       i === 0 ? cx.moveTo(toX(i), toY(ys[i])) : cx.lineTo(toX(i), toY(ys[i]));
     }
-    cx.strokeStyle = `rgba(0,199,255,${(0.55 + focus * 0.42) * Math.max(0.3, reveal)})`;
-    cx.lineWidth   = 1.4 + focus * 1.4;
-    cx.lineJoin    = 'round'; cx.lineCap = 'round';
+    cx.lineJoin = 'round'; cx.lineCap = 'round';
+
+    // Pass 1: soft outer halo (wide, very transparent — glass body depth)
+    cx.strokeStyle = `rgba(0,199,255,${(0.10 + focus * 0.12) * Math.max(0.3, reveal)})`;
+    cx.lineWidth   = 7 + focus * 5;
     cx.stroke();
 
-    // ── Phase indicator: arrows + dynamic label ───────────────────────────
-    const arA   = 0.55 * reveal;
+    // Pass 2: mid glow (glass body)
+    cx.strokeStyle = `rgba(60,220,255,${(0.35 + focus * 0.28) * Math.max(0.3, reveal)})`;
+    cx.lineWidth   = 2.8 + focus * 1.8;
+    cx.stroke();
+
+    // Pass 3: specular core (bright white-tinted — light through glass edge)
+    cx.strokeStyle = `rgba(200,245,255,${(0.72 + focus * 0.24) * Math.max(0.3, reveal)})`;
+    cx.lineWidth   = 0.85;
+    cx.stroke();
+
+    // ── Phase indicator: larger arrows + label ───────────────────────────
+    const arA   = 0.70 * reveal;
     const label = isFocusing ? 'FOCUSING' : 'REVERSE';
-    const indY  = pt + 11;
+    const indY  = pt + 14;
 
     cx.save();
-    cx.font = '300 6.8px JetBrains Mono, monospace';
-    const tW       = cx.measureText(label).width;
-    const padX     = 7;   // space between arrow tip and text edge
-    const arrW     = 9;   // arrow length in px
-    const rightBase = pl + cW - 8;
+    cx.font = '400 9.5px JetBrains Mono, monospace';
+    const tW        = cx.measureText(label).width;
+    const padX      = 10;
+    const arrW      = 13;
+    const rightBase = pl + cW - 10;
     const leftBase  = rightBase - arrW - padX - tW - padX - arrW;
     const textCX    = leftBase + arrW + padX + tW / 2;
 
