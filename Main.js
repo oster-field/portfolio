@@ -518,57 +518,199 @@ function initViz(id, drawFn) {
 initViz('viz1', function(cv) {
   const cx = cv.getContext('2d');
   const W = cv.width, H = cv.height;
-  const PAD = {l:40,r:20,t:30,b:28};
-  const bins = 18, xMax = 3.2;
-  const rayleigh = Array.from({length:bins}, (_,i) => { const x=(i+.5)/bins*xMax; return x*Math.exp(-x*x/2); });
-  const rMax = Math.max(...rayleigh);
-  const empirical = rayleigh.map((v,i) => {
-    const tail = i > bins*.72 ? v*(1+(i-bins*.72)*.18) : v;
-    return tail*(.87+Math.random()*.06);
+  const PAD = {l:44, r:24, t:36, b:34};
+
+  // Seeded RNG — same noise pattern every load
+  function mulberry32(a) {
+    return function() {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  const rng = mulberry32(0xdeadbeef);
+
+  const bins = 36, xMax = 3.5;
+  const rayleigh = Array.from({length: bins}, (_, i) => {
+    const x = (i + .5) / bins * xMax;
+    return x * Math.exp(-x * x / 2);
   });
-  let frame = 0, raf;
+  const rMax = Math.max(...rayleigh);
+
+  // Empirical: seeded noise so bars are stable across renders
+  const empirical = rayleigh.map((v, i) => {
+    const tail = i > bins * .72 ? v * (1 + (i - bins * .72) * .16) : v;
+    return tail * (.88 + rng() * .055);
+  });
+
+  // Pre-compute smooth Rayleigh curve at high resolution
+  const CURVE_PTS = 260;
+  const curveX = [], curveY = [];
+  for (let i = 0; i <= CURVE_PTS; i++) {
+    const x = (i / CURVE_PTS) * xMax;
+    curveX.push(x);
+    curveY.push(x * Math.exp(-x * x / 2));
+  }
+
+  // Rogue threshold index
+  const rogueIdx = Math.round(bins * 0.74);
+
+  let frame = 0;
+
+  // Ease-in-out cubic
+  function ease(t) {
+    return t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
+  }
 
   function draw() {
-    cx.clearRect(0,0,W,H);
-    const progress = Math.min(1, frame/55);
-    const chartW = W-PAD.l-PAD.r, chartH = H-PAD.t-PAD.b;
-    const bw = chartW / bins;
+    cx.clearRect(0, 0, W, H);
+    const raw      = Math.min(1, frame / 70);
+    const progress = ease(raw);
+    const chartW   = W - PAD.l - PAD.r;
+    const chartH   = H - PAD.t - PAD.b;
+    const bw       = chartW / bins;
+    const baseY    = PAD.t + chartH;
 
-    for (let i = 0; i < bins; i++) {
-      const bh = empirical[i]/rMax * chartH * .88 * progress;
-      const x = PAD.l + i*bw;
-      const y = PAD.t + chartH - bh;
-      const g = cx.createLinearGradient(0,y,0,PAD.t+chartH);
-      g.addColorStop(0,'rgba(0,113,227,.85)'); g.addColorStop(1,'rgba(0,113,227,.18)');
-      cx.fillStyle = g; cx.fillRect(x+1,y,bw-2,bh);
+    // ── Rogue zone shading ──────────────────────────────────────────────
+    if (progress > .6) {
+      const zoneAlpha = (progress - .6) / .4 * 0.055;
+      const zoneX = PAD.l + rogueIdx * bw;
+      cx.fillStyle = `rgba(255,90,40,${zoneAlpha})`;
+      cx.fillRect(zoneX, PAD.t, W - zoneX - PAD.r, chartH);
+      // Vertical threshold line
+      cx.beginPath();
+      cx.setLineDash([3, 4]);
+      cx.strokeStyle = `rgba(255,130,60,${(progress - .6) / .4 * 0.35})`;
+      cx.lineWidth = 0.8;
+      cx.moveTo(zoneX, PAD.t);
+      cx.lineTo(zoneX, baseY);
+      cx.stroke();
+      cx.setLineDash([]);
+      // Label
+      if (progress > .85) {
+        const la = (progress - .85) / .15;
+        cx.font = `400 7.5px 'JetBrains Mono', monospace`;
+        cx.fillStyle = `rgba(255,140,70,${la * .55})`;
+        cx.fillText('H > 2σ', zoneX + 4, PAD.t + 11);
+      }
     }
 
-    // Rayleigh curve
+    // ── Grid lines ──────────────────────────────────────────────────────
+    cx.strokeStyle = 'rgba(255,255,255,.05)';
+    cx.lineWidth   = 0.6;
+    for (let g = 0; g <= 4; g++) {
+      const gy = PAD.t + chartH * (1 - g / 4);
+      cx.beginPath(); cx.moveTo(PAD.l, gy); cx.lineTo(PAD.l + chartW, gy); cx.stroke();
+    }
+
+    // ── Bars ─────────────────────────────────────────────────────────────
+    const GAP = Math.max(1, bw * 0.12);
+    for (let i = 0; i < bins; i++) {
+      const bh  = empirical[i] / rMax * chartH * .88 * progress;
+      const x   = PAD.l + i * bw + GAP;
+      const bwi = bw - GAP * 2;
+      const y   = baseY - bh;
+      const t   = empirical[i] / rMax; // normalised height 0–1
+
+      // Per-bar gradient: deeper blue base → bright cyan tip at peak
+      const g = cx.createLinearGradient(0, y, 0, baseY);
+      g.addColorStop(0, `rgba(0,199,255,${0.55 + t * 0.35})`);
+      g.addColorStop(0.4, `rgba(0,145,230,${0.45 + t * 0.2})`);
+      g.addColorStop(1, 'rgba(0,60,140,.12)');
+      cx.fillStyle = g;
+      cx.fillRect(x, y, bwi, bh);
+
+      // Top glow cap on tallest bars
+      if (t > .75 && progress > .5) {
+        const glowA = (t - .75) / .25 * (progress - .5) / .5 * 0.55;
+        const capG  = cx.createLinearGradient(0, y, 0, y + 4);
+        capG.addColorStop(0, `rgba(180,240,255,${glowA})`);
+        capG.addColorStop(1, 'rgba(0,199,255,0)');
+        cx.fillStyle = capG;
+        cx.fillRect(x, y, bwi, 4);
+      }
+    }
+
+    // ── Rayleigh smooth curve ───────────────────────────────────────────
     cx.beginPath();
-    for (let i = 0; i < bins; i++) {
-      const x = PAD.l + (i+.5)*bw;
-      const y = PAD.t + chartH - rayleigh[i]/rMax*chartH*.88*progress;
-      i===0 ? cx.moveTo(x,y) : cx.lineTo(x,y);
+    for (let i = 0; i <= CURVE_PTS; i++) {
+      const px = PAD.l + (curveX[i] / xMax) * chartW;
+      const py = baseY - curveY[i] / rMax * chartH * .88 * progress;
+      i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
     }
-    cx.strokeStyle='rgba(0,199,255,.75)'; cx.lineWidth=1.8; cx.stroke();
+    cx.strokeStyle = 'rgba(0,199,255,.82)';
+    cx.lineWidth   = 1.6;
+    cx.lineJoin    = 'round';
+    cx.stroke();
 
-    if (progress > .88) {
-      const rx = PAD.l + bins*.74*bw;
-      cx.fillStyle='rgba(255,90,40,.07)'; cx.fillRect(rx,PAD.t,W-rx-PAD.r,chartH);
-      cx.font='500 8.5px JetBrains Mono, monospace';
-      cx.fillStyle='rgba(255,140,70,.65)'; cx.fillText('ROGUE ZONE',rx+5,PAD.t+13);
+    // Glow pass for the curve
+    cx.beginPath();
+    for (let i = 0; i <= CURVE_PTS; i++) {
+      const px = PAD.l + (curveX[i] / xMax) * chartW;
+      const py = baseY - curveY[i] / rMax * chartH * .88 * progress;
+      i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
+    }
+    cx.strokeStyle = 'rgba(0,199,255,.18)';
+    cx.lineWidth   = 5;
+    cx.stroke();
+
+    // ── Axes ────────────────────────────────────────────────────────────
+    cx.strokeStyle = 'rgba(255,255,255,.15)';
+    cx.lineWidth   = 0.7;
+    // X axis
+    cx.beginPath(); cx.moveTo(PAD.l, baseY); cx.lineTo(PAD.l + chartW, baseY); cx.stroke();
+    // Y axis
+    cx.beginPath(); cx.moveTo(PAD.l, PAD.t); cx.lineTo(PAD.l, baseY); cx.stroke();
+
+    // X ticks + labels
+    cx.font      = '300 8px "DM Sans", sans-serif';
+    cx.fillStyle = 'rgba(134,134,139,.55)';
+    cx.textAlign = 'center';
+    for (let t = 0; t <= 3; t++) {
+      const tx = PAD.l + (t / xMax) * chartW;
+      cx.beginPath();
+      cx.strokeStyle = 'rgba(255,255,255,.1)';
+      cx.lineWidth   = 0.5;
+      cx.moveTo(tx, baseY); cx.lineTo(tx, baseY + 3); cx.stroke();
+      cx.fillText(t.toString(), tx, baseY + 12);
+    }
+    // X axis label
+    cx.font      = '300 8.5px "DM Sans", sans-serif';
+    cx.fillStyle = 'rgba(134,134,139,.5)';
+    cx.fillText('h / σ', PAD.l + chartW / 2, baseY + 26);
+
+    // Y ticks
+    cx.textAlign = 'right';
+    for (let g = 1; g <= 4; g++) {
+      const gy  = PAD.t + chartH * (1 - g / 4);
+      const val = (g / 4 * rMax).toFixed(2);
+      cx.font      = '300 7.5px "JetBrains Mono", monospace';
+      cx.fillStyle = 'rgba(134,134,139,.38)';
+      cx.fillText(val, PAD.l - 5, gy + 3);
     }
 
-    // Legend
-    cx.font='300 9px DM Sans, sans-serif'; cx.fillStyle='rgba(134,134,139,.7)';
-    cx.fillText('Wave height distribution (h/σ)',PAD.l,PAD.t-12);
-    cx.fillStyle='rgba(0,199,255,.6)'; cx.fillRect(W-PAD.r-80,PAD.t-18,10,2);
-    cx.fillStyle='rgba(134,134,139,.65)'; cx.fillText('Rayleigh',W-PAD.r-66,PAD.t-14);
-    cx.fillStyle='rgba(0,113,227,.7)'; cx.fillRect(W-PAD.r-80,PAD.t-8,10,7);
-    cx.fillStyle='rgba(134,134,139,.65)'; cx.fillText('Empirical',W-PAD.r-66,PAD.t-2);
+    // ── Legend ──────────────────────────────────────────────────────────
+    cx.textAlign = 'left';
+    cx.font      = '300 8.5px "DM Sans", sans-serif';
+    cx.fillStyle = 'rgba(180,180,190,.5)';
+    cx.fillText('Wave height distribution  h / σ', PAD.l, PAD.t - 18);
+
+    // Curve legend
+    cx.fillStyle = 'rgba(0,199,255,.75)';
+    cx.fillRect(PAD.l, PAD.t - 7, 16, 1.5);
+    cx.fillStyle = 'rgba(134,134,139,.55)';
+    cx.font      = '300 8px "DM Sans", sans-serif';
+    cx.fillText('Rayleigh', PAD.l + 20, PAD.t - 4);
+
+    // Bar legend
+    cx.fillStyle = 'rgba(0,145,220,.7)';
+    cx.fillRect(PAD.l + 80, PAD.t - 10, 8, 7);
+    cx.fillStyle = 'rgba(134,134,139,.55)';
+    cx.fillText('Empirical', PAD.l + 92, PAD.t - 4);
 
     frame++;
-    if (frame < 100) raf = requestAnimationFrame(draw);
+    if (frame < 120) requestAnimationFrame(draw);
   }
   draw();
 });
