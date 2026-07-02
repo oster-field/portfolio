@@ -557,46 +557,45 @@ initViz('viz1', function(cv) {
   const rogueIdx = Math.round(bins * 0.74);
 
   let frame = 0;
+  let buildDone = false;
+  let ambientStart = 0;
+  const SHIMMER_PERIOD = 3000; // ms — one left→right sweep
+  const SHIMMER_WIDTH  = 5;    // bars affected on each side of peak
 
   // Ease-in-out cubic
   function ease(t) {
     return t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
   }
 
-  function draw() {
+  function drawScene(progress, shimmerPos) {
+    // shimmerPos: 0 → bins, or -1 when inactive
     cx.clearRect(0, 0, W, H);
-    const raw      = Math.min(1, frame / 70);
-    const progress = ease(raw);
-    const chartW   = W - PAD.l - PAD.r;
-    const chartH   = H - PAD.t - PAD.b;
-    const bw       = chartW / bins;
-    const baseY    = PAD.t + chartH;
+    const chartW = W - PAD.l - PAD.r;
+    const chartH = H - PAD.t - PAD.b;
+    const bw     = chartW / bins;
+    const baseY  = PAD.t + chartH;
 
-    // ── Rogue zone shading ──────────────────────────────────────────────
+    // ── Rogue zone ──────────────────────────────────────────────────────
     if (progress > .6) {
-      const zoneAlpha = (progress - .6) / .4 * 0.055;
+      const za   = (progress - .6) / .4 * 0.055;
       const zoneX = PAD.l + rogueIdx * bw;
-      cx.fillStyle = `rgba(255,90,40,${zoneAlpha})`;
+      cx.fillStyle = `rgba(255,90,40,${za})`;
       cx.fillRect(zoneX, PAD.t, W - zoneX - PAD.r, chartH);
-      // Vertical threshold line
       cx.beginPath();
       cx.setLineDash([3, 4]);
-      cx.strokeStyle = `rgba(255,130,60,${(progress - .6) / .4 * 0.35})`;
+      cx.strokeStyle = `rgba(255,130,60,${(progress-.6)/.4*.35})`;
       cx.lineWidth = 0.8;
-      cx.moveTo(zoneX, PAD.t);
-      cx.lineTo(zoneX, baseY);
-      cx.stroke();
+      cx.moveTo(zoneX, PAD.t); cx.lineTo(zoneX, baseY); cx.stroke();
       cx.setLineDash([]);
-      // Label
       if (progress > .85) {
         const la = (progress - .85) / .15;
         cx.font = `400 7.5px 'JetBrains Mono', monospace`;
-        cx.fillStyle = `rgba(255,140,70,${la * .55})`;
+        cx.fillStyle = `rgba(255,140,70,${la*.55})`;
         cx.fillText('H > 2σ', zoneX + 4, PAD.t + 11);
       }
     }
 
-    // ── Grid lines ──────────────────────────────────────────────────────
+    // ── Grid ────────────────────────────────────────────────────────────
     cx.strokeStyle = 'rgba(255,255,255,.05)';
     cx.lineWidth   = 0.6;
     for (let g = 0; g <= 4; g++) {
@@ -607,23 +606,37 @@ initViz('viz1', function(cv) {
     // ── Bars ─────────────────────────────────────────────────────────────
     const GAP = Math.max(1, bw * 0.12);
     for (let i = 0; i < bins; i++) {
-      const bh  = empirical[i] / rMax * chartH * .88 * progress;
+      // Shimmer influence on this bar (0 = none, 1 = peak)
+      const dist     = shimmerPos >= 0 ? Math.max(0, 1 - Math.abs(i - shimmerPos) / SHIMMER_WIDTH) : 0;
+      const shimmer  = ease(dist);                    // smooth bell
+      const heightMod = 1 + shimmer * 0.07;           // carrier bar +7% height
+
+      const bh  = empirical[i] / rMax * chartH * .88 * progress * heightMod;
       const x   = PAD.l + i * bw + GAP;
       const bwi = bw - GAP * 2;
       const y   = baseY - bh;
-      const t   = empirical[i] / rMax; // normalised height 0–1
+      const t   = empirical[i] / rMax;
 
-      // Per-bar gradient: deeper blue base → bright cyan tip at peak
+      // Base gradient — brightened by shimmer
       const g = cx.createLinearGradient(0, y, 0, baseY);
-      g.addColorStop(0, `rgba(0,199,255,${0.55 + t * 0.35})`);
-      g.addColorStop(0.4, `rgba(0,145,230,${0.45 + t * 0.2})`);
+      g.addColorStop(0, `rgba(0,199,255,${0.55 + t*0.35 + shimmer*0.30})`);
+      g.addColorStop(0.4, `rgba(0,145,230,${0.45 + t*0.2 + shimmer*0.15})`);
       g.addColorStop(1, 'rgba(0,60,140,.12)');
       cx.fillStyle = g;
       cx.fillRect(x, y, bwi, bh);
 
-      // Top glow cap on tallest bars
+      // Shimmer highlight overlay — a vertical white-cyan streak
+      if (shimmer > 0.05) {
+        const hg = cx.createLinearGradient(0, y, 0, y + bh * 0.5);
+        hg.addColorStop(0, `rgba(200,245,255,${shimmer * 0.38})`);
+        hg.addColorStop(1, 'rgba(0,199,255,0)');
+        cx.fillStyle = hg;
+        cx.fillRect(x, y, bwi, bh * 0.5);
+      }
+
+      // Top glow cap on tall bars
       if (t > .75 && progress > .5) {
-        const glowA = (t - .75) / .25 * (progress - .5) / .5 * 0.55;
+        const glowA = (t-.75)/.25 * (progress-.5)/.5 * (0.55 + shimmer*0.25);
         const capG  = cx.createLinearGradient(0, y, 0, y + 4);
         capG.addColorStop(0, `rgba(180,240,255,${glowA})`);
         capG.addColorStop(1, 'rgba(0,199,255,0)');
@@ -632,7 +645,7 @@ initViz('viz1', function(cv) {
       }
     }
 
-    // ── Rayleigh smooth curve ───────────────────────────────────────────
+    // ── Rayleigh curve ──────────────────────────────────────────────────
     cx.beginPath();
     for (let i = 0; i <= CURVE_PTS; i++) {
       const px = PAD.l + (curveX[i] / xMax) * chartW;
@@ -640,11 +653,8 @@ initViz('viz1', function(cv) {
       i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
     }
     cx.strokeStyle = 'rgba(0,199,255,.82)';
-    cx.lineWidth   = 1.6;
-    cx.lineJoin    = 'round';
-    cx.stroke();
+    cx.lineWidth   = 1.6; cx.lineJoin = 'round'; cx.stroke();
 
-    // Glow pass for the curve
     cx.beginPath();
     for (let i = 0; i <= CURVE_PTS; i++) {
       const px = PAD.l + (curveX[i] / xMax) * chartW;
@@ -652,66 +662,70 @@ initViz('viz1', function(cv) {
       i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
     }
     cx.strokeStyle = 'rgba(0,199,255,.18)';
-    cx.lineWidth   = 5;
-    cx.stroke();
+    cx.lineWidth   = 5; cx.stroke();
 
     // ── Axes ────────────────────────────────────────────────────────────
-    cx.strokeStyle = 'rgba(255,255,255,.15)';
-    cx.lineWidth   = 0.7;
-    // X axis
+    cx.strokeStyle = 'rgba(255,255,255,.15)'; cx.lineWidth = 0.7;
     cx.beginPath(); cx.moveTo(PAD.l, baseY); cx.lineTo(PAD.l + chartW, baseY); cx.stroke();
-    // Y axis
     cx.beginPath(); cx.moveTo(PAD.l, PAD.t); cx.lineTo(PAD.l, baseY); cx.stroke();
 
-    // X ticks + labels
-    cx.font      = '300 8px "DM Sans", sans-serif';
+    cx.font = '300 8px "DM Sans", sans-serif';
     cx.fillStyle = 'rgba(134,134,139,.55)';
     cx.textAlign = 'center';
     for (let t = 0; t <= 3; t++) {
       const tx = PAD.l + (t / xMax) * chartW;
-      cx.beginPath();
-      cx.strokeStyle = 'rgba(255,255,255,.1)';
-      cx.lineWidth   = 0.5;
-      cx.moveTo(tx, baseY); cx.lineTo(tx, baseY + 3); cx.stroke();
-      cx.fillText(t.toString(), tx, baseY + 12);
+      cx.beginPath(); cx.strokeStyle='rgba(255,255,255,.1)'; cx.lineWidth=0.5;
+      cx.moveTo(tx, baseY); cx.lineTo(tx, baseY+3); cx.stroke();
+      cx.fillText(t.toString(), tx, baseY+12);
     }
-    // X axis label
-    cx.font      = '300 8.5px "DM Sans", sans-serif';
-    cx.fillStyle = 'rgba(134,134,139,.5)';
-    cx.fillText('h / σ', PAD.l + chartW / 2, baseY + 26);
+    cx.font='300 8.5px "DM Sans",sans-serif'; cx.fillStyle='rgba(134,134,139,.5)';
+    cx.fillText('h / σ', PAD.l + chartW/2, baseY+26);
 
-    // Y ticks
     cx.textAlign = 'right';
     for (let g = 1; g <= 4; g++) {
-      const gy  = PAD.t + chartH * (1 - g / 4);
-      const val = (g / 4 * rMax).toFixed(2);
-      cx.font      = '300 7.5px "JetBrains Mono", monospace';
-      cx.fillStyle = 'rgba(134,134,139,.38)';
-      cx.fillText(val, PAD.l - 5, gy + 3);
+      const gy = PAD.t + chartH*(1-g/4);
+      cx.font='300 7.5px "JetBrains Mono",monospace';
+      cx.fillStyle='rgba(134,134,139,.38)';
+      cx.fillText((g/4*rMax).toFixed(2), PAD.l-5, gy+3);
     }
 
     // ── Legend ──────────────────────────────────────────────────────────
-    cx.textAlign = 'left';
-    cx.font      = '300 8.5px "DM Sans", sans-serif';
-    cx.fillStyle = 'rgba(180,180,190,.5)';
-    cx.fillText('Wave height distribution  h / σ', PAD.l, PAD.t - 18);
-
-    // Curve legend
-    cx.fillStyle = 'rgba(0,199,255,.75)';
-    cx.fillRect(PAD.l, PAD.t - 7, 16, 1.5);
-    cx.fillStyle = 'rgba(134,134,139,.55)';
-    cx.font      = '300 8px "DM Sans", sans-serif';
-    cx.fillText('Rayleigh', PAD.l + 20, PAD.t - 4);
-
-    // Bar legend
-    cx.fillStyle = 'rgba(0,145,220,.7)';
-    cx.fillRect(PAD.l + 80, PAD.t - 10, 8, 7);
-    cx.fillStyle = 'rgba(134,134,139,.55)';
-    cx.fillText('Empirical', PAD.l + 92, PAD.t - 4);
-
-    frame++;
-    if (frame < 120) requestAnimationFrame(draw);
+    cx.textAlign='left';
+    cx.font='300 8.5px "DM Sans",sans-serif'; cx.fillStyle='rgba(180,180,190,.5)';
+    cx.fillText('Wave height distribution  h / σ', PAD.l, PAD.t-18);
+    cx.fillStyle='rgba(0,199,255,.75)'; cx.fillRect(PAD.l, PAD.t-7, 16, 1.5);
+    cx.fillStyle='rgba(134,134,139,.55)'; cx.font='300 8px "DM Sans",sans-serif';
+    cx.fillText('Rayleigh', PAD.l+20, PAD.t-4);
+    cx.fillStyle='rgba(0,145,220,.7)'; cx.fillRect(PAD.l+80, PAD.t-10, 8, 7);
+    cx.fillStyle='rgba(134,134,139,.55)';
+    cx.fillText('Empirical', PAD.l+92, PAD.t-4);
   }
+
+  // ── Build-in animation ──────────────────────────────────────────────────
+  function draw() {
+    const progress = ease(Math.min(1, frame / 70));
+    drawScene(progress, -1);
+    frame++;
+    if (frame < 120) {
+      requestAnimationFrame(draw);
+    } else {
+      buildDone = true;
+      ambientStart = performance.now();
+      requestAnimationFrame(ambient);
+    }
+  }
+
+  // ── Ambient shimmer loop — rAF only while tab is visible ───────────────
+  function ambient(now) {
+    const elapsed  = now - ambientStart;
+    // phase 0→1 over SHIMMER_PERIOD, then repeats
+    const phase    = (elapsed % SHIMMER_PERIOD) / SHIMMER_PERIOD;
+    // ease the phase so shimmer accelerates in the middle and slows at edges
+    const shimmerPos = phase * (bins + SHIMMER_WIDTH * 2) - SHIMMER_WIDTH;
+    drawScene(1, shimmerPos);
+    requestAnimationFrame(ambient);
+  }
+
   draw();
 });
 
