@@ -798,18 +798,13 @@ initViz('viz2', function(cv) {
     const cW = W - pl - pr, cH = Hc - pt - pb;
     const midY = pt + cH * 0.54;
 
-    // Grid
-    gc.lineWidth = 0.6; gc.setLineDash([1, 5]);
-    gc.strokeStyle = 'rgba(255,255,255,0.35)';
-    for (let i = 1; i < 7; i++) {
-      const y = pt + (i / 7) * cH;
+    // Grid — горизонтали только (4 шт.), сплошные, cyan-тинтинг палитры сайта
+    gc.lineWidth   = 0.75;
+    gc.strokeStyle = 'rgba(0,160,255,0.11)';
+    for (let i = 1; i <= 4; i++) {
+      const y = pt + (i / 5) * cH;
       gc.beginPath(); gc.moveTo(pl, y); gc.lineTo(pl + cW, y); gc.stroke();
     }
-    for (let i = 1; i < 9; i++) {
-      const x = pl + (i / 9) * cW;
-      gc.beginPath(); gc.moveTo(x, pt); gc.lineTo(x, pt + cH); gc.stroke();
-    }
-    gc.setLineDash([]);
 
     // X axis
     gc.lineWidth = 0.85;
@@ -841,6 +836,22 @@ initViz('viz2', function(cv) {
     }
 
     gridW = W; gridH = Hc;
+
+    // ── Dispersion cone: characteristic lines from focus centre (x=0 ↔ canvas mid)
+    // Each slope represents a different group velocity — faster (shallower) = long wave,
+    // slower (steeper) = short wave. All converge at the focus point. Drawn once, free.
+    const fcX    = Math.round(pl + cW / 2);
+    const slopes = [0.14, 0.28, 0.50, 0.88, 1.55, 3.20];
+    gc.lineWidth = 0.55; gc.setLineDash([2, 9]);
+    gc.strokeStyle = 'rgba(0,199,255,0.042)';
+    gc.save();
+    gc.beginPath(); gc.rect(pl, pt, cW, cH); gc.clip();
+    for (const sl of slopes) {
+      const dxR = pl + cW - fcX, dxL = fcX - pl;
+      gc.beginPath(); gc.moveTo(fcX, midY); gc.lineTo(fcX + dxR, midY - sl * dxR); gc.stroke();
+      gc.beginPath(); gc.moveTo(fcX, midY); gc.lineTo(fcX - dxL, midY - sl * dxL); gc.stroke();
+    }
+    gc.setLineDash([]); gc.restore();
   }
 
   // OPT 2: Pre-built linear gradient for fill-under-wave (direction only — y values at init)
@@ -856,6 +867,16 @@ initViz('viz2', function(cv) {
     fillGrad.addColorStop(0.65, 'rgba(0,113,227,0.06)');
     fillGrad.addColorStop(1,    'rgba(0,0,0,0)');
   }
+
+  // ── Ghost trail ring buffer ──────────────────────────────────────────────
+  // 5 past wave states sampled every GHOST_DT sim-seconds. Each slot is a
+  // Float32Array reused each cycle — zero allocation in draw().
+  const GHOST_N     = 5;
+  const GHOST_DT    = 0.38;   // sim-seconds between samples
+  const GHOST_ALPHA = [0.09, 0.062, 0.038, 0.020, 0.010];
+  const ghostYs     = Array.from({length: GHOST_N}, () => new Float32Array(NPTS + 1));
+  let   ghostHead   = 0;
+  let   lastGhostT  = -999;
 
   // OPT 6: phaseArrow outside draw() — defined once
   function phaseArrow(x, y, pointRight, alpha) {
@@ -915,6 +936,14 @@ initViz('viz2', function(cv) {
     // ── Physics ──────────────────────────────────────────────────────────
     const { peakVal, peakIdx } = computeSurface(tEff);
     const focus = Math.max(0, Math.min(1, peakVal / ampMax));
+
+    // ── Ghost trail: sample current wave into ring buffer every GHOST_DT sim-secs
+    // Float32Array.set() is a single native copy — negligible cost
+    if (Math.abs(tEff - lastGhostT) >= GHOST_DT) {
+      ghostYs[ghostHead].set(ys);
+      ghostHead   = (ghostHead + 1) % GHOST_N;
+      lastGhostT  = tEff;
+    }
 
     // ── Hot zone ─────────────────────────────────────────────────────────
     if (focus > 0.35 && reveal > 0.4) {
@@ -980,6 +1009,24 @@ initViz('viz2', function(cv) {
       cx.beginPath(); cx.rect(pl, pt, cW, cH); cx.clip();
       cx.fillStyle = gr; cx.fillRect(pl, pt, cW, cH);
       cx.restore();
+    }
+
+    // ── Ghost trail — drawn behind the main wave ──────────────────────────
+    // One mid-weight stroke per ghost (no 3-pass — ghosts are suggestive, not sharp)
+    if (reveal > 0.3) {
+      cx.lineJoin = 'round'; cx.lineCap = 'round'; cx.lineWidth = 2.2;
+      for (let g = 0; g < GHOST_N; g++) {
+        const a = GHOST_ALPHA[g] * reveal;
+        if (a < 0.007) continue;
+        const buf = ghostYs[(ghostHead - 1 - g + GHOST_N) % GHOST_N];
+        cx.strokeStyle = `rgba(0,199,255,${a})`;
+        cx.beginPath();
+        for (let i = 0; i <= NPTS; i++) {
+          const px = toX(i), py = toY(buf[i]);
+          i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
+        }
+        cx.stroke();
+      }
     }
 
     // ── Wave — 3-pass Liquid Glass ────────────────────────────────────────
