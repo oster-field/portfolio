@@ -574,18 +574,16 @@ initViz('viz1', function(cv) {
 });
 
 /* Viz 2 — Dispersive wave-packet focusing
-   Physics: direct port of Animation.py  |  Optimisation: phasor rotation (no per-point trig)
-   Entrance: wave grows from x-axis like viz1 bars  |  Loop: ping-pong (no restart jump) */
+   Opts: phasor rotation · offscreen grid · cached gradients · skip physics pre-reveal */
 initViz('viz2', function(cv) {
   const cx = cv.getContext('2d');
 
-  // ── Physics constants (Animation.py) ────────────────────────────────────
+  // ── Physics constants ────────────────────────────────────────────────────
   const l = 2 * Math.sqrt(2), s = 200, g = 9.8;
   const XMIN = -75, XMAX = 75, T0 = -10, T1 = 10;
   const NPTS = 220;
   const dx   = (XMAX - XMIN) / NPTS;
 
-  // Build harmonic table
   const Hkn = [], Hwn = [], Han = [];
   for (let n = 1; n <= 350; n++) {
     const kn = Math.PI * n / s;
@@ -594,7 +592,6 @@ initViz('viz2', function(cv) {
   }
   const HL = Hkn.length;
 
-  // Pre-compute phasor step rotations (fixed for all frames — dx never changes)
   const cosDel = new Float32Array(HL);
   const sinDel = new Float32Array(HL);
   for (let i = 0; i < HL; i++) {
@@ -602,11 +599,10 @@ initViz('viz2', function(cv) {
     sinDel[i] = Math.sin(-Hkn[i] * dx);
   }
 
-  // Working arrays (reused each frame)
   const cosP = new Float32Array(HL);
   const sinP = new Float32Array(HL);
   const ys   = new Float32Array(NPTS + 1);
-  const envs = new Float32Array(NPTS + 1);   // analytic envelope |signal|
+  const envs = new Float32Array(NPTS + 1);
 
   const ampMax = Han.reduce((a, v) => a + Math.abs(v), 0) * 0.88;
 
@@ -621,23 +617,100 @@ initViz('viz2', function(cv) {
       let yR = 0, yI = 0;
       for (let i = 0; i < HL; i++) {
         yR += Han[i] * cosP[i];
-        yI += Han[i] * sinP[i];   // quadrature: free via phasor
+        yI += Han[i] * sinP[i];
         const c = cosP[i] * cosDel[i] - sinP[i] * sinDel[i];
         sinP[i] = sinP[i] * cosDel[i] + cosP[i] * sinDel[i];
         cosP[i] = c;
       }
       ys[xi]   = yR;
-      envs[xi] = Math.sqrt(yR * yR + yI * yI);   // |analytic signal|
+      envs[xi] = Math.sqrt(yR * yR + yI * yI);
       if (yR > peakVal) { peakVal = yR; peakIdx = xi; }
     }
     return { peakVal, peakIdx };
   }
 
-  // ── Axis arrow helper (defined once, not per-frame) ──────────────────────
-  function arrowHead(x, y, angle) {
-    cx.save(); cx.translate(x, y); cx.rotate(angle);
-    cx.beginPath(); cx.moveTo(0,0); cx.lineTo(-6,-2.5); cx.lineTo(-6,2.5); cx.closePath();
-    cx.fillStyle = 'rgba(245,245,247,0.15)'; cx.fill(); cx.restore();
+  // ── Layout constants (match at resize) ──────────────────────────────────
+  const pl = 36, pr = 22, pt = 22, pb = 30;
+
+  // ── OPT 1: Offscreen canvas for static grid + axes ──────────────────────
+  let gridCanvas = null, gridW = 0, gridH = 0;
+
+  function buildGrid(W, Hc) {
+    gridCanvas = document.createElement('canvas');
+    gridCanvas.width = W; gridCanvas.height = Hc;
+    const gc = gridCanvas.getContext('2d');
+    const cW = W - pl - pr, cH = Hc - pt - pb;
+    const midY = pt + cH * 0.54;
+
+    // Grid
+    gc.lineWidth = 0.6; gc.setLineDash([1, 5]);
+    gc.strokeStyle = 'rgba(255,255,255,0.35)';
+    for (let i = 1; i < 7; i++) {
+      const y = pt + (i / 7) * cH;
+      gc.beginPath(); gc.moveTo(pl, y); gc.lineTo(pl + cW, y); gc.stroke();
+    }
+    for (let i = 1; i < 9; i++) {
+      const x = pl + (i / 9) * cW;
+      gc.beginPath(); gc.moveTo(x, pt); gc.lineTo(x, pt + cH); gc.stroke();
+    }
+    gc.setLineDash([]);
+
+    // X axis
+    gc.lineWidth = 0.85;
+    gc.beginPath(); gc.moveTo(pl, midY); gc.lineTo(pl + cW, midY);
+    gc.strokeStyle = 'rgba(245,245,247,0.12)'; gc.stroke();
+
+    // Y axis
+    gc.beginPath(); gc.moveTo(pl, pt); gc.lineTo(pl, pt + cH);
+    gc.strokeStyle = 'rgba(245,245,247,0.09)'; gc.stroke();
+
+    // Arrow heads
+    function ah(x, y, angle) {
+      gc.save(); gc.translate(x, y); gc.rotate(angle);
+      gc.beginPath(); gc.moveTo(0,0); gc.lineTo(-6,-2.5); gc.lineTo(-6,2.5); gc.closePath();
+      gc.fillStyle = 'rgba(245,245,247,0.15)'; gc.fill(); gc.restore();
+    }
+    ah(pl + cW, midY, 0);
+    ah(pl, pt, -Math.PI / 2);
+
+    // Ticks
+    gc.strokeStyle = 'rgba(245,245,247,0.10)'; gc.lineWidth = 0.8;
+    for (let i = 0; i <= 8; i++) {
+      const x = pl + (i / 8) * cW;
+      gc.beginPath(); gc.moveTo(x, midY - 3.5); gc.lineTo(x, midY + 3.5); gc.stroke();
+    }
+    for (let i = 0; i <= 5; i++) {
+      const y = pt + (i / 5) * cH;
+      gc.beginPath(); gc.moveTo(pl - 3.5, y); gc.lineTo(pl + 3.5, y); gc.stroke();
+    }
+
+    gridW = W; gridH = Hc;
+  }
+
+  // OPT 2: Pre-built linear gradient for fill-under-wave (direction only — y values at init)
+  // Recreated only when canvas resizes, not every frame.
+  // Alpha injected via globalAlpha.
+  let fillGrad = null;
+
+  function buildFillGrad(W, Hc) {
+    const cH  = Hc - pt - pb;
+    const midY = pt + cH * 0.54;
+    fillGrad = cx.createLinearGradient(0, pt, 0, midY);
+    fillGrad.addColorStop(0,    'rgba(0,199,255,0.16)');
+    fillGrad.addColorStop(0.65, 'rgba(0,113,227,0.06)');
+    fillGrad.addColorStop(1,    'rgba(0,0,0,0)');
+  }
+
+  // OPT 6: phaseArrow outside draw() — defined once
+  function phaseArrow(x, y, pointRight, alpha) {
+    const d = pointRight ? 1 : -1;
+    cx.beginPath();
+    cx.moveTo(x, y);
+    cx.lineTo(x + d * 9, y - 3.5);
+    cx.lineTo(x + d * 9, y + 3.5);
+    cx.closePath();
+    cx.fillStyle = `rgba(255,90,40,${alpha})`;
+    cx.fill();
   }
 
   // ── Animation state ──────────────────────────────────────────────────────
@@ -656,62 +729,43 @@ initViz('viz2', function(cv) {
     const elapsed = (ts - startTs) / 1000;
     const reveal  = Math.min(1, elapsed / REVEAL_S);
 
-    const cycle   = elapsed % (2 * HALF_S);
-    const frac    = cycle < HALF_S ? cycle / HALF_S : 2 - cycle / HALF_S;
-    const tEff    = T0 + (T1 - T0) * frac;
-    const isFocusing = cycle < HALF_S;   // for phase arrow direction
+    // OPT 4: skip all physics + drawing while invisible
+    if (reveal < 0.05) return;
 
     const W = cv.width, Hc = cv.height;
-    const pl = 36, pr = 22, pt = 22, pb = 30;
     const cW = W - pl - pr, cH = Hc - pt - pb;
     const midY = pt + cH * 0.54;
 
-    const toX  = i => pl + (i / NPTS) * cW;
-    const toY  = v => midY - (v / ampMax) * cH * 0.40 * reveal;
-    const toYe = v => midY - (v / ampMax) * cH * 0.40 * reveal;  // same scale for envelope
+    // Build/rebuild offscreen grid on first frame or after real resize
+    if (!gridCanvas || gridW !== W || gridH !== Hc) {
+      buildGrid(W, Hc);
+      buildFillGrad(W, Hc);
+    }
+
+    const toX = i => pl + (i / NPTS) * cW;
+    // OPT 3: toYe removed — single toY used everywhere
+    const toY = v => midY - (v / ampMax) * cH * 0.40 * reveal;
+
+    const cycle      = elapsed % (2 * HALF_S);
+    const frac       = cycle < HALF_S ? cycle / HALF_S : 2 - cycle / HALF_S;
+    const tEff       = T0 + (T1 - T0) * frac;
+    const isFocusing = cycle < HALF_S;
 
     cx.clearRect(0, 0, W, Hc);
 
-    // ── Grid ─────────────────────────────────────────────────────────────
-    cx.lineWidth = 0.6; cx.setLineDash([1, 5]);
-    cx.strokeStyle = 'rgba(255,255,255,0.35)';
-    for (let i = 1; i < 7; i++) {
-      const y = pt + (i / 7) * cH;
-      cx.beginPath(); cx.moveTo(pl, y); cx.lineTo(pl + cW, y); cx.stroke();
-    }
-    for (let i = 1; i < 9; i++) {
-      const x = pl + (i / 9) * cW;
-      cx.beginPath(); cx.moveTo(x, pt); cx.lineTo(x, pt + cH); cx.stroke();
-    }
-    cx.setLineDash([]);
-
-    // ── Axes ─────────────────────────────────────────────────────────────
-    cx.lineWidth = 0.85;
-    cx.beginPath(); cx.moveTo(pl, midY); cx.lineTo(pl + cW, midY);
-    cx.strokeStyle = 'rgba(245,245,247,0.12)'; cx.stroke();
-    cx.beginPath(); cx.moveTo(pl, pt); cx.lineTo(pl, pt + cH);
-    cx.strokeStyle = 'rgba(245,245,247,0.09)'; cx.stroke();
-    arrowHead(pl + cW, midY, 0);
-    arrowHead(pl, pt, -Math.PI / 2);
-
-    cx.strokeStyle = 'rgba(245,245,247,0.10)'; cx.lineWidth = 0.8;
-    for (let i = 0; i <= 8; i++) {
-      const x = pl + (i / 8) * cW;
-      cx.beginPath(); cx.moveTo(x, midY - 3.5); cx.lineTo(x, midY + 3.5); cx.stroke();
-    }
-    for (let i = 0; i <= 5; i++) {
-      const y = pt + (i / 5) * cH;
-      cx.beginPath(); cx.moveTo(pl - 3.5, y); cx.lineTo(pl + 3.5, y); cx.stroke();
-    }
+    // OPT 1: draw static grid from offscreen canvas in one call
+    cx.drawImage(gridCanvas, 0, 0);
 
     // ── Physics ──────────────────────────────────────────────────────────
     const { peakVal, peakIdx } = computeSurface(tEff);
     const focus = Math.max(0, Math.min(1, peakVal / ampMax));
 
-    // ── 2. HOT ZONE — warm vertical band at peak, behind wave ─────────────
+    // ── Hot zone ─────────────────────────────────────────────────────────
     if (focus > 0.35 && reveal > 0.4) {
       const peakPx   = toX(peakIdx);
-      const halfBand = (40 + 60 * focus);
+      const halfBand = 40 + 60 * focus;
+      // OPT 2: createLinearGradient only for hot zone (changes x each frame)
+      // This is unavoidable (center moves) — but kept narrow in scope
       const zg = cx.createLinearGradient(peakPx - halfBand, 0, peakPx + halfBand, 0);
       const za = (focus - 0.35) * 0.28 * reveal;
       zg.addColorStop(0,    'rgba(0,0,0,0)');
@@ -725,34 +779,30 @@ initViz('viz2', function(cv) {
       cx.restore();
     }
 
-    // ── Fill under wave ───────────────────────────────────────────────────
+    // ── Fill under wave (OPT 2: pre-built gradient + globalAlpha) ────────
     cx.beginPath();
     cx.moveTo(toX(0), midY);
     for (let i = 0; i <= NPTS; i++) cx.lineTo(toX(i), toY(ys[i]));
     cx.lineTo(toX(NPTS), midY);
     cx.closePath();
-    const fillG = cx.createLinearGradient(0, toY(ampMax), 0, midY);
-    fillG.addColorStop(0,    `rgba(0,199,255,${(0.06 + focus * 0.10) * reveal})`);
-    fillG.addColorStop(0.65, `rgba(0,113,227,${(0.02 + focus * 0.04) * reveal})`);
-    fillG.addColorStop(1,    'rgba(0,0,0,0)');
-    cx.fillStyle = fillG; cx.fill();
+    cx.globalAlpha = (0.4 + focus * 0.6) * reveal;
+    cx.fillStyle   = fillGrad;
+    cx.fill();
+    cx.globalAlpha = 1;
 
-    // ── 1. ENVELOPE — analytic |signal|, dashed, above & below ───────────
+    // ── Envelope (OPT 3: toY used directly) ──────────────────────────────
     if (reveal > 0.2) {
-      const envAlpha = 0.28 * reveal;
       cx.setLineDash([4, 6]);
-      cx.lineWidth = 0.9;
-      cx.strokeStyle = `rgba(0,199,255,${envAlpha})`;
+      cx.lineWidth   = 0.9;
+      cx.strokeStyle = `rgba(0,199,255,${0.28 * reveal})`;
 
-      // Upper envelope
       cx.beginPath();
       for (let i = 0; i <= NPTS; i++) {
-        const px = toX(i), py = toYe(envs[i]);
+        const px = toX(i), py = toY(envs[i]);
         i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
       }
       cx.stroke();
 
-      // Lower envelope (mirror)
       cx.beginPath();
       for (let i = 0; i <= NPTS; i++) {
         const px = toX(i), py = midY + (envs[i] / ampMax) * cH * 0.40 * reveal;
@@ -762,7 +812,7 @@ initViz('viz2', function(cv) {
       cx.setLineDash([]);
     }
 
-    // ── Glow at crest ─────────────────────────────────────────────────────
+    // ── Glow (OPT 2: radialGradient still needed — position changes; clipped) ──
     if (focus > 0.28 && reveal > 0.5) {
       const gx = toX(peakIdx), gy = toY(ys[peakIdx]);
       const gr = cx.createRadialGradient(gx, gy, 0, gx, gy, 80 * focus);
@@ -779,41 +829,35 @@ initViz('viz2', function(cv) {
     // ── Wave line ─────────────────────────────────────────────────────────
     cx.beginPath();
     for (let i = 0; i <= NPTS; i++) {
-      const px = toX(i), py = toY(ys[i]);
-      i === 0 ? cx.moveTo(px, py) : cx.lineTo(px, py);
+      i === 0 ? cx.moveTo(toX(i), toY(ys[i])) : cx.lineTo(toX(i), toY(ys[i]));
     }
     cx.strokeStyle = `rgba(0,199,255,${(0.55 + focus * 0.42) * Math.max(0.3, reveal)})`;
     cx.lineWidth   = 1.4 + focus * 1.4;
     cx.lineJoin    = 'round'; cx.lineCap = 'round';
     cx.stroke();
 
-    // ── 3. PHASE INDICATOR — arrows in top-right corner ───────────────────
-    // isFocusing: two arrows pointing INWARD (→|←)  else OUTWARD (←|→)
-    const ax  = pl + cW - 6;   // right anchor
-    const ay  = pt + 10;       // top row
-    const gap = 14;             // gap between arrow pair
-    const arA = 0.55 * reveal;
+    // ── Phase indicator: arrows + dynamic label ───────────────────────────
+    const arA   = 0.55 * reveal;
+    const label = isFocusing ? 'FOCUSING' : 'REVERSE';
+    const indY  = pt + 11;
 
-    function phaseArrow(x, y, pointRight) {
-      const d = pointRight ? 1 : -1;
-      cx.beginPath();
-      cx.moveTo(x, y);
-      cx.lineTo(x + d * 9, y - 3.5);
-      cx.lineTo(x + d * 9, y + 3.5);
-      cx.closePath();
-      cx.fillStyle = `rgba(255,90,40,${arA})`;
-      cx.fill();
-    }
+    cx.save();
+    cx.font = '300 6.8px JetBrains Mono, monospace';
+    const tW       = cx.measureText(label).width;
+    const padX     = 7;   // space between arrow tip and text edge
+    const arrW     = 9;   // arrow length in px
+    const rightBase = pl + cW - 8;
+    const leftBase  = rightBase - arrW - padX - tW - padX - arrW;
+    const textCX    = leftBase + arrW + padX + tW / 2;
 
-    if (isFocusing) {
-      // → ← (converging)
-      phaseArrow(ax - gap - 4, ay, true);
-      phaseArrow(ax + 4,       ay, false);
-    } else {
-      // ← → (diverging)
-      phaseArrow(ax - gap - 4, ay, false);
-      phaseArrow(ax + 4,       ay, true);
-    }
+    phaseArrow(leftBase,  indY, isFocusing,  arA);
+    phaseArrow(rightBase, indY, !isFocusing, arA);
+
+    cx.fillStyle    = `rgba(255,90,40,${arA})`;
+    cx.textAlign    = 'center';
+    cx.textBaseline = 'middle';
+    cx.fillText(label, textCX, indY);
+    cx.restore();
   }
 
   raf = requestAnimationFrame(draw);
