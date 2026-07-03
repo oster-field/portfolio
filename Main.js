@@ -839,24 +839,38 @@ initViz('viz2', function(cv, isRestart) {
     gc.fillStyle = axisG;
     gc.fillRect(0, midY, W, Hc);
 
-    // Glowing x-axis line (zero line — the "calm sea")
-    gc.beginPath(); gc.moveTo(pl, midY); gc.lineTo(pl + cW, midY);
-    gc.strokeStyle = 'rgba(0,185,255,0.28)'; gc.lineWidth = 0.9; gc.stroke();
+    // Clip everything that follows to the chart area
+    // so axis glow can't bleed outside the canvas boundary
+    gc.save();
+    gc.beginPath(); gc.rect(pl, pt, cW, cH); gc.clip();
 
-    // Y-axis (silent, barely there)
-    gc.beginPath(); gc.moveTo(pl, pt); gc.lineTo(pl, pt + cH);
+    // Glowing x-axis line — concentrated glow, clipped so it can't escape
+    gc.shadowColor = 'rgba(0,185,255,0.55)';
+    gc.shadowBlur  = 6;
+    gc.beginPath(); gc.moveTo(pl, midY); gc.lineTo(pl + cW - 8, midY);
+    gc.strokeStyle = 'rgba(0,185,255,0.32)'; gc.lineWidth = 0.9; gc.stroke();
+    gc.shadowBlur  = 0;
+
+    // Second pass: narrow bright core
+    gc.beginPath(); gc.moveTo(pl, midY); gc.lineTo(pl + cW - 8, midY);
+    gc.strokeStyle = 'rgba(120,220,255,0.18)'; gc.lineWidth = 0.5; gc.stroke();
+
+    // Y-axis
+    gc.beginPath(); gc.moveTo(pl, pt + 8); gc.lineTo(pl, pt + cH);
     gc.strokeStyle = 'rgba(245,245,247,0.07)'; gc.lineWidth = 0.7; gc.stroke();
 
-    // Axis arrow heads
+    gc.restore(); // end clip
+
+    // Arrow heads — drawn outside clip so they sit at exact axis tips
     function ah(x, y, angle) {
       gc.save(); gc.translate(x, y); gc.rotate(angle);
       gc.beginPath(); gc.moveTo(0,0); gc.lineTo(-6,-2.5); gc.lineTo(-6,2.5); gc.closePath();
-      gc.fillStyle = 'rgba(245,245,247,0.15)'; gc.fill(); gc.restore();
+      gc.fillStyle = 'rgba(245,245,247,0.18)'; gc.fill(); gc.restore();
     }
     ah(pl + cW, midY, 0);
     ah(pl, pt, -Math.PI / 2);
 
-    // Tick marks: x-axis subtle, y-axis amplitude reference
+    // Tick marks
     gc.lineWidth = 0.8;
     gc.strokeStyle = 'rgba(0,185,255,0.20)';
     for (let i = 0; i <= 8; i++) {
@@ -981,14 +995,12 @@ initViz('viz2', function(cv, isRestart) {
       lastGhostT  = tEff;
     }
 
-    // ── Hot zone ─────────────────────────────────────────────────────────
+    // ── Hot zone — narrower band, clipped ──────────────────────────────────
     if (focus > 0.35 && reveal > 0.4) {
       const peakPx   = toX(peakIdx);
-      const halfBand = 40 + 60 * focus;
-      // OPT 2: createLinearGradient only for hot zone (changes x each frame)
-      // This is unavoidable (center moves) — but kept narrow in scope
+      const halfBand = 28 + 36 * focus;      // was 40+60 — tighter band
       const zg = cx.createLinearGradient(peakPx - halfBand, 0, peakPx + halfBand, 0);
-      const za = (focus - 0.35) * 0.28 * reveal;
+      const za = (focus - 0.35) * 0.22 * reveal;
       zg.addColorStop(0,    'rgba(0,0,0,0)');
       zg.addColorStop(0.38, `rgba(255,70,20,${za * 0.5})`);
       zg.addColorStop(0.5,  `rgba(255,80,30,${za})`);
@@ -1033,17 +1045,18 @@ initViz('viz2', function(cv, isRestart) {
       cx.setLineDash([]);
     }
 
-    // ── Glow (OPT 2: radialGradient still needed — position changes; clipped) ──
+    // ── Red peak glow — tight radius, clipped to chart area ──────────────
     if (focus > 0.28 && reveal > 0.5) {
-      const gx = toX(peakIdx), gy = toY(ys[peakIdx]);
-      const gr = cx.createRadialGradient(gx, gy, 0, gx, gy, 80 * focus);
-      const a  = (focus - 0.28) * 0.55 * reveal;
-      gr.addColorStop(0,    `rgba(255,90,40,${a})`);
-      gr.addColorStop(0.45, `rgba(200,40,20,${a * 0.28})`);
+      const gx   = toX(peakIdx), gy = toY(ys[peakIdx]);
+      const rad  = 28 + 22 * focus;          // was 80*focus — much tighter
+      const gr   = cx.createRadialGradient(gx, gy, 0, gx, gy, rad);
+      const a    = (focus - 0.28) * 0.75 * reveal; // brighter at centre
+      gr.addColorStop(0,    `rgba(255,100,40,${a})`);
+      gr.addColorStop(0.35, `rgba(200,50,20,${a * 0.35})`);
       gr.addColorStop(1,    'rgba(0,0,0,0)');
       cx.save();
       cx.beginPath(); cx.rect(pl, pt, cW, cH); cx.clip();
-      cx.fillStyle = gr; cx.fillRect(pl, pt, cW, cH);
+      cx.fillStyle = gr; cx.fillRect(pl - 1, pt - 1, cW + 2, cH + 2);
       cx.restore();
     }
 
