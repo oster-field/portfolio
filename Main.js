@@ -474,15 +474,17 @@ function initViz(id, drawFn) {
   let lastWidth = 0;
   let isVisible = false;
   let played    = false;
-  let stopFn    = null;   // drawFn may return a function to cancel its own RAF loop
+  let stopFn    = null;
+  let hasBeenPlayed = false;   // never reset — survives scroll-away/back cycles
 
   function start() {
     cv.width  = parent.offsetWidth;
     cv.height = parent.offsetHeight;
     lastWidth = cv.width;
     if (stopFn) { stopFn(); stopFn = null; }
-    stopFn = drawFn(cv) || null;
+    stopFn = drawFn(cv, hasBeenPlayed) || null;  // pass restart flag
     played = true;
+    hasBeenPlayed = true;
   }
 
   function doResize() {
@@ -731,7 +733,7 @@ initViz('viz1', function(cv) {
 
 /* Viz 2 — Dispersive wave-packet focusing
    Opts: phasor rotation · offscreen grid · cached gradients · skip physics pre-reveal */
-initViz('viz2', function(cv) {
+initViz('viz2', function(cv, isRestart) {
   const cx = cv.getContext('2d');
 
   // ── Physics constants ────────────────────────────────────────────────────
@@ -895,6 +897,7 @@ initViz('viz2', function(cv) {
   const HALF_S   = 8.5;
   const FRAME    = 1000 / 30;
   const REVEAL_S = 0.85;
+  let revealDone = !!isRestart;   // skip entrance animation on scroll-back restarts
 
   function draw(ts) {
     if (cancelled) return;
@@ -904,7 +907,8 @@ initViz('viz2', function(cv) {
     if (!startTs) startTs = ts;
 
     const elapsed = (ts - startTs) / 1000;
-    const reveal  = Math.min(1, elapsed / REVEAL_S);
+    const reveal  = revealDone ? 1 : Math.min(1, elapsed / REVEAL_S);
+    if (!revealDone && reveal >= 1) revealDone = true;
 
     // OPT 4: skip all physics + drawing while invisible
     if (reveal < 0.05) return;
