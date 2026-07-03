@@ -561,7 +561,9 @@ initViz('viz1', function(cv) {
   let frame = 0;
   let buildDone = false;
   let ambientStart = 0;
-  const SHIMMER_PERIOD = 3000; // ms — one left→right sweep
+  const SHIMMER_PERIOD = 3000; // ms — duration of one left→right sweep
+  const SHIMMER_PAUSE  = 2000; // ms — rest between sweeps
+  const SHIMMER_CYCLE  = SHIMMER_PERIOD + SHIMMER_PAUSE; // total cycle
   const SHIMMER_WIDTH  = 5;    // bars affected on each side of peak
 
   // Ease-in-out cubic
@@ -607,11 +609,15 @@ initViz('viz1', function(cv) {
 
     // ── Bars ─────────────────────────────────────────────────────────────
     const GAP = Math.max(1, bw * 0.12);
+    // Cyan → Lavender colour pair (mirrors hero wave surge palette)
+    // shimmer = 0: pure cyan [0,199,255]
+    // shimmer = 1: lavender  [170,130,255]
+    function lerpCh(a, b, s) { return Math.round(a + (b - a) * s); }
+
     for (let i = 0; i < bins; i++) {
-      // Shimmer influence on this bar (0 = none, 1 = peak)
-      const dist     = shimmerPos >= 0 ? Math.max(0, 1 - Math.abs(i - shimmerPos) / SHIMMER_WIDTH) : 0;
-      const shimmer  = ease(dist);                    // smooth bell
-      const heightMod = 1 + shimmer * 0.07;           // carrier bar +7% height
+      const dist      = shimmerPos >= 0 ? Math.max(0, 1 - Math.abs(i - shimmerPos) / SHIMMER_WIDTH) : 0;
+      const shimmer   = ease(dist);
+      const heightMod = 1 + shimmer * 0.07;
 
       const bh  = empirical[i] / rMax * chartH * .88 * progress * heightMod;
       const x   = PAD.l + i * bw + GAP;
@@ -619,29 +625,40 @@ initViz('viz1', function(cv) {
       const y   = baseY - bh;
       const t   = empirical[i] / rMax;
 
-      // Base gradient — brightened by shimmer
+      // Interpolated tip colour: cyan → lavender as shimmer grows
+      const cr = lerpCh(0,   170, shimmer);
+      const cg = lerpCh(199, 130, shimmer);
+      const cb = lerpCh(255, 255, shimmer);
+      // Mid colour: blue → violet-blue
+      const mr = lerpCh(0,   100, shimmer);
+      const mg = lerpCh(145,  80, shimmer);
+      const mb = lerpCh(230, 220, shimmer);
+
       const g = cx.createLinearGradient(0, y, 0, baseY);
-      g.addColorStop(0, `rgba(0,199,255,${0.55 + t*0.35 + shimmer*0.30})`);
-      g.addColorStop(0.4, `rgba(0,145,230,${0.45 + t*0.2 + shimmer*0.15})`);
-      g.addColorStop(1, 'rgba(0,60,140,.12)');
+      g.addColorStop(0,   `rgba(${cr},${cg},${cb},${0.55 + t*0.35 + shimmer*0.30})`);
+      g.addColorStop(0.4, `rgba(${mr},${mg},${mb},${0.45 + t*0.2  + shimmer*0.15})`);
+      g.addColorStop(1,   'rgba(0,60,140,.12)');
       cx.fillStyle = g;
       cx.fillRect(x, y, bwi, bh);
 
-      // Shimmer highlight overlay — a vertical white-cyan streak
+      // Shimmer overlay streak — lavender-tinted at peak
       if (shimmer > 0.05) {
-        const hg = cx.createLinearGradient(0, y, 0, y + bh * 0.5);
-        hg.addColorStop(0, `rgba(200,245,255,${shimmer * 0.38})`);
-        hg.addColorStop(1, 'rgba(0,199,255,0)');
-        cx.fillStyle = hg;
+        const hr = lerpCh(200, 230, shimmer);
+        const hg2 = lerpCh(245, 200, shimmer);
+        const hb = 255;
+        const hgrd = cx.createLinearGradient(0, y, 0, y + bh * 0.5);
+        hgrd.addColorStop(0, `rgba(${hr},${hg2},${hb},${shimmer * 0.38})`);
+        hgrd.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+        cx.fillStyle = hgrd;
         cx.fillRect(x, y, bwi, bh * 0.5);
       }
 
-      // Top glow cap on tall bars
+      // Top glow cap
       if (t > .75 && progress > .5) {
         const glowA = (t-.75)/.25 * (progress-.5)/.5 * (0.55 + shimmer*0.25);
         const capG  = cx.createLinearGradient(0, y, 0, y + 4);
-        capG.addColorStop(0, `rgba(180,240,255,${glowA})`);
-        capG.addColorStop(1, 'rgba(0,199,255,0)');
+        capG.addColorStop(0, `rgba(${lerpCh(180,220,shimmer)},${lerpCh(240,180,shimmer)},255,${glowA})`);
+        capG.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
         cx.fillStyle = capG;
         cx.fillRect(x, y, bwi, 4);
       }
@@ -721,9 +738,11 @@ initViz('viz1', function(cv) {
   function ambient(now) {
     const elapsed  = now - ambientStart;
     // phase 0→1 over SHIMMER_PERIOD, then repeats
-    const phase    = (elapsed % SHIMMER_PERIOD) / SHIMMER_PERIOD;
-    // ease the phase so shimmer accelerates in the middle and slows at edges
-    const shimmerPos = phase * (bins + SHIMMER_WIDTH * 2) - SHIMMER_WIDTH;
+    const cyclePos  = elapsed % SHIMMER_CYCLE;
+    // active only during SHIMMER_PERIOD; rest of the cycle shimmer is off
+    const shimmerPos = cyclePos < SHIMMER_PERIOD
+      ? (cyclePos / SHIMMER_PERIOD) * (bins + SHIMMER_WIDTH * 2) - SHIMMER_WIDTH
+      : -1;
     drawScene(1, shimmerPos);
     requestAnimationFrame(ambient);
   }
