@@ -459,6 +459,12 @@ section { padding: clamp(5rem,10vw,9rem) 5vw; }
 .edu-item { display: grid; grid-template-columns: 1rem 1fr; gap: 0 1.75rem; padding-bottom: 2.25rem; position: relative; }
 .edu-item::after { content: ''; position: absolute; left: .44rem; top: 1.3rem; bottom: 0; width: 1px; background: rgba(255,255,255,.07); }
 .edu-item:last-child::after { display: none; }
+/* Forces its own compositing layer ahead of the .reveal opacity/transform
+   transition, so the diploma button's backdrop-filter blur renders the
+   same way throughout the animation instead of only "settling" fully
+   once the parent's transition ends (a known backdrop-filter + ancestor
+   transform/opacity compositing quirk). */
+.edu-item.reveal { will-change: opacity, transform; }
 
 .edu-dot { width: .9rem; height: .9rem; border-radius: 50%; border: 2px solid var(--cyan); background: var(--black); margin-top: .3rem; position: relative; z-index: 1; }
 .edu-deg { font-family: var(--serif); font-size: 1.15rem; font-weight: 400; color: var(--t1); margin-bottom: .22rem; }
@@ -837,7 +843,15 @@ footer p { font-size: .7rem; color: var(--t2); }
 .btn-glass:active.btn-glass--red,
 .btn-glass:active.btn-glass--violet { transform: translateY(0); }
 
-.edu-doc-btn { margin-top: .75rem; }
+.edu-doc-btn {
+  margin-top: .75rem;
+  /* Roughly half the base .btn-glass alpha — matches how translucent it
+     read mid-way through the .reveal fade-in, kept as the resting state
+     instead of only appearing during the animation. */
+  background: linear-gradient(155deg, rgba(0,199,255,.1), rgba(0,160,220,.035));
+  border-color: rgba(120,225,255,.17);
+  will-change: backdrop-filter;
+}
 
 .exp-doc-row {
   margin-top: 1.5rem; padding-top: 1.2rem;
