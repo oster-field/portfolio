@@ -841,18 +841,41 @@ initViz('viz2', function(cv, isRestart) {
 
     // Clip everything that follows to the chart area
     // so axis glow can't bleed outside the canvas boundary
+    // (widened to W-2 on the right so the axis line can reach the arrow tip)
     gc.save();
-    gc.beginPath(); gc.rect(pl, pt, cW, cH); gc.clip();
+    gc.beginPath(); gc.rect(pl, pt, W - pl - 2, cH); gc.clip();
+
+    // ── Faint fading grid — soft reference lines with no hard cutoff at the
+    // chart edges. Each line carries its own gradient that dies to zero
+    // alpha at both ends, so nothing gets clipped off abruptly.
+    for (let i = 1; i <= 4; i++) {
+      const gy = pt + (i / 5) * cH;
+      const hg = gc.createLinearGradient(pl, 0, pl + cW, 0);
+      hg.addColorStop(0,    'rgba(0,199,255,0)');
+      hg.addColorStop(0.5,  'rgba(0,199,255,0.05)');
+      hg.addColorStop(1,    'rgba(0,199,255,0)');
+      gc.strokeStyle = hg; gc.lineWidth = 0.6;
+      gc.beginPath(); gc.moveTo(pl, gy); gc.lineTo(pl + cW, gy); gc.stroke();
+    }
+    for (let i = 1; i <= 7; i++) {
+      const gx = pl + (i / 8) * cW;
+      const vg = gc.createLinearGradient(0, pt, 0, pt + cH);
+      vg.addColorStop(0,    'rgba(245,245,247,0)');
+      vg.addColorStop(0.5,  'rgba(245,245,247,0.035)');
+      vg.addColorStop(1,    'rgba(245,245,247,0)');
+      gc.strokeStyle = vg; gc.lineWidth = 0.6;
+      gc.beginPath(); gc.moveTo(gx, pt); gc.lineTo(gx, pt + cH); gc.stroke();
+    }
 
     // Glowing x-axis line — concentrated glow, clipped so it can't escape
     gc.shadowColor = 'rgba(0,185,255,0.55)';
     gc.shadowBlur  = 6;
-    gc.beginPath(); gc.moveTo(pl, midY); gc.lineTo(pl + cW - 8, midY);
+    gc.beginPath(); gc.moveTo(pl, midY); gc.lineTo(W - 8, midY);
     gc.strokeStyle = 'rgba(0,185,255,0.32)'; gc.lineWidth = 0.9; gc.stroke();
     gc.shadowBlur  = 0;
 
     // Second pass: narrow bright core
-    gc.beginPath(); gc.moveTo(pl, midY); gc.lineTo(pl + cW - 8, midY);
+    gc.beginPath(); gc.moveTo(pl, midY); gc.lineTo(W - 8, midY);
     gc.strokeStyle = 'rgba(120,220,255,0.18)'; gc.lineWidth = 0.5; gc.stroke();
 
     // Y-axis
@@ -867,7 +890,7 @@ initViz('viz2', function(cv, isRestart) {
       gc.beginPath(); gc.moveTo(0,0); gc.lineTo(-6,-2.5); gc.lineTo(-6,2.5); gc.closePath();
       gc.fillStyle = 'rgba(245,245,247,0.18)'; gc.fill(); gc.restore();
     }
-    ah(pl + cW, midY, 0);
+    ah(W - 2, midY, 0);
     ah(pl, pt, -Math.PI / 2);
 
     // Tick marks
@@ -902,19 +925,18 @@ initViz('viz2', function(cv, isRestart) {
     gc.setLineDash([]); gc.restore();
   }
 
-  // OPT 2: Pre-built linear gradient for fill-under-wave (direction only — y values at init)
-  // Recreated only when canvas resizes, not every frame.
-  // Alpha injected via globalAlpha.
-  let fillGrad = null;
+  // OPT 2b: Horizontal stroke gradient for the wave line — a gentle drift
+  // across cool tones only (blue → cyan → teal), never leaving that family.
+  // Built once per resize; per-frame brightness still comes from globalAlpha.
+  let lineGrad = null;
 
-  function buildFillGrad(W, Hc) {
-    const cH  = Hc - pt - pb;
-    const midY = pt + cH * 0.54;
-    fillGrad = cx.createLinearGradient(0, pt, 0, midY);
-    fillGrad.addColorStop(0,    'rgba(0,199,255,0.16)');
-    fillGrad.addColorStop(0.65, 'rgba(0,113,227,0.06)');
-    fillGrad.addColorStop(1,    'rgba(0,0,0,0)');
+  function buildLineGrad(W, Hc) {
+    lineGrad = cx.createLinearGradient(pl, 0, W - pr, 0);
+    lineGrad.addColorStop(0,   'rgba(35,90,255,1)');    // indigo-blue
+    lineGrad.addColorStop(0.5, 'rgba(0,190,255,1)');    // site cyan
+    lineGrad.addColorStop(1,   'rgba(0,255,180,1)');    // saturated turquoise
   }
+
 
   // ── Ghost trail ring buffer ──────────────────────────────────────────────
   // 5 past wave states sampled every GHOST_DT sim-seconds. Each slot is a
@@ -966,7 +988,7 @@ initViz('viz2', function(cv, isRestart) {
     // Build/rebuild offscreen grid on first frame or after real resize
     if (!gridCanvas || gridW !== W || gridH !== Hc) {
       buildGrid(W, Hc);
-      buildFillGrad(W, Hc);
+      buildLineGrad(W, Hc);
     }
 
     const toX = i => pl + (i / NPTS) * cW;
@@ -1012,14 +1034,24 @@ initViz('viz2', function(cv, isRestart) {
       cx.restore();
     }
 
-    // ── Fill under wave (OPT 2: pre-built gradient + globalAlpha) ────────
+    // ── Fill under wave — gradient re-anchored every frame to the current
+    // peak's actual pixel height (cheap: one gradient object, not per-column).
+    // Fixes the old fixed pt→midY span, which most ripples never reached,
+    // so the glow now always spans the curve's real height and stays
+    // brightest at the tallest point.
+    const peakY  = toY(Math.max(peakVal, ampMax * 0.12));
+    const fillG  = cx.createLinearGradient(0, peakY, 0, midY);
+    fillG.addColorStop(0,   'rgba(0,225,255,0.40)');
+    fillG.addColorStop(0.6, 'rgba(0,170,230,0.14)');
+    fillG.addColorStop(1,   'rgba(0,0,0,0)');
+
     cx.beginPath();
     cx.moveTo(toX(0), midY);
     for (let i = 0; i <= NPTS; i++) cx.lineTo(toX(i), toY(ys[i]));
     cx.lineTo(toX(NPTS), midY);
     cx.closePath();
-    cx.globalAlpha = (0.4 + focus * 0.6) * reveal;
-    cx.fillStyle   = fillGrad;
+    cx.globalAlpha = (0.55 + focus * 0.25) * reveal;
+    cx.fillStyle   = fillG;
     cx.fill();
     cx.globalAlpha = 1;
 
@@ -1087,14 +1119,18 @@ initViz('viz2', function(cv, isRestart) {
     cx.lineJoin = 'round'; cx.lineCap = 'round';
 
     // Pass 1: soft outer halo (wide, very transparent — glass body depth)
-    cx.strokeStyle = `rgba(0,199,255,${(0.10 + focus * 0.12) * Math.max(0.3, reveal)})`;
+    // Horizontal blue→cyan→turquoise drift, brightness still driven by focus/reveal
+    cx.strokeStyle = lineGrad;
+    cx.globalAlpha = (0.10 + focus * 0.12) * Math.max(0.3, reveal);
     cx.lineWidth   = 7 + focus * 5;
     cx.stroke();
 
     // Pass 2: mid glow (glass body)
-    cx.strokeStyle = `rgba(60,220,255,${(0.35 + focus * 0.28) * Math.max(0.3, reveal)})`;
+    cx.strokeStyle = lineGrad;
+    cx.globalAlpha = (0.35 + focus * 0.28) * Math.max(0.3, reveal);
     cx.lineWidth   = 2.8 + focus * 1.8;
     cx.stroke();
+    cx.globalAlpha = 1;
 
     // Pass 3: specular core (bright white-tinted — light through glass edge)
     cx.strokeStyle = `rgba(200,245,255,${(0.72 + focus * 0.24) * Math.max(0.3, reveal)})`;
