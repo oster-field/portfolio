@@ -800,24 +800,35 @@ initViz('viz2', function(cv, isRestart) {
     const cW = W - pl - pr, cH = Hc - pt - pb;
     const midY = pt + cH * 0.54;
 
-    // Grid — горизонтали только (4 шт.), сплошные, cyan-тинтинг палитры сайта
-    gc.lineWidth   = 0.75;
-    gc.strokeStyle = 'rgba(0,160,255,0.11)';
-    for (let i = 1; i <= 4; i++) {
-      const y = pt + (i / 5) * cH;
-      gc.beginPath(); gc.moveTo(pl, y); gc.lineTo(pl + cW, y); gc.stroke();
-    }
+    // ── No gridlines — modern oscilloscope / scientific instrument aesthetic ─
+    // Ambient depth: faint elliptical glow from the zero-line center outward.
+    // Gives spatial depth without any lines competing with the wave.
+    const depthG = gc.createRadialGradient(
+      pl + cW / 2, midY, 0,
+      pl + cW / 2, midY, Math.max(cW, cH) * 0.72
+    );
+    depthG.addColorStop(0,    'rgba(0,160,255,0.032)');
+    depthG.addColorStop(0.55, 'rgba(0,100,200,0.014)');
+    depthG.addColorStop(1,    'rgba(0,0,0,0)');
+    gc.fillStyle = depthG;
+    gc.fillRect(0, 0, W, Hc);
 
-    // X axis
-    gc.lineWidth = 0.85;
+    // Soft downward glow from x-axis — "calm water surface" under the waves
+    const axisG = gc.createLinearGradient(0, midY, 0, midY + cH * 0.28);
+    axisG.addColorStop(0, 'rgba(0,170,255,0.055)');
+    axisG.addColorStop(1, 'rgba(0,0,0,0)');
+    gc.fillStyle = axisG;
+    gc.fillRect(0, midY, W, Hc);
+
+    // Glowing x-axis line (zero line — the "calm sea")
     gc.beginPath(); gc.moveTo(pl, midY); gc.lineTo(pl + cW, midY);
-    gc.strokeStyle = 'rgba(245,245,247,0.12)'; gc.stroke();
+    gc.strokeStyle = 'rgba(0,185,255,0.28)'; gc.lineWidth = 0.9; gc.stroke();
 
-    // Y axis
+    // Y-axis (silent, barely there)
     gc.beginPath(); gc.moveTo(pl, pt); gc.lineTo(pl, pt + cH);
-    gc.strokeStyle = 'rgba(245,245,247,0.09)'; gc.stroke();
+    gc.strokeStyle = 'rgba(245,245,247,0.07)'; gc.lineWidth = 0.7; gc.stroke();
 
-    // Arrow heads
+    // Axis arrow heads
     function ah(x, y, angle) {
       gc.save(); gc.translate(x, y); gc.rotate(angle);
       gc.beginPath(); gc.moveTo(0,0); gc.lineTo(-6,-2.5); gc.lineTo(-6,2.5); gc.closePath();
@@ -826,15 +837,17 @@ initViz('viz2', function(cv, isRestart) {
     ah(pl + cW, midY, 0);
     ah(pl, pt, -Math.PI / 2);
 
-    // Ticks
-    gc.strokeStyle = 'rgba(245,245,247,0.10)'; gc.lineWidth = 0.8;
+    // Tick marks: x-axis subtle, y-axis amplitude reference
+    gc.lineWidth = 0.8;
+    gc.strokeStyle = 'rgba(0,185,255,0.20)';
     for (let i = 0; i <= 8; i++) {
       const x = pl + (i / 8) * cW;
       gc.beginPath(); gc.moveTo(x, midY - 3.5); gc.lineTo(x, midY + 3.5); gc.stroke();
     }
-    for (let i = 0; i <= 5; i++) {
+    gc.strokeStyle = 'rgba(245,245,247,0.14)';
+    for (let i = 1; i <= 4; i++) {
       const y = pt + (i / 5) * cH;
-      gc.beginPath(); gc.moveTo(pl - 3.5, y); gc.lineTo(pl + 3.5, y); gc.stroke();
+      gc.beginPath(); gc.moveTo(pl - 4.5, y); gc.lineTo(pl + 4.5, y); gc.stroke();
     }
 
     gridW = W; gridH = Hc;
