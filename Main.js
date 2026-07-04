@@ -197,8 +197,8 @@ const LB_DOCS = {
     de: { type: 'Arbeitszeugnis',   title: 'Arbeitszeugnis',       path: 'doc/lieferando.pdf' },
   },
   more_info: {
-    en: { type: 'Personal Statement', title: 'Get to Know Me Better — Andrei Tregubov', path: 'doc/more_info.pdf' },
-    de: { type: 'Persönliche Notiz',  title: 'Mehr über mich — Andrei Tregubov',        path: 'doc/more_info.pdf' },
+    en: { type: 'Personal Statement', title: 'Get to Know Me Better', path: 'doc/more_info.pdf' },
+    de: { type: 'Persönliche Notiz',  title: 'Mehr über mich',        path: 'doc/more_info_de.pdf' },
   },
 };
 
