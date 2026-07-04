@@ -256,7 +256,7 @@ async function lbDrawPages(pdf, scale, gen) {
 async function renderPDF(path) {
   const gen = ++lbGen;
   const viewer = document.getElementById('lb-pdf-viewer');
-  const containerW = viewer.getBoundingClientRect().width;
+  const containerW = viewer.offsetWidth;
 
   try {
     const pdf = await pdfjsLib.getDocument(path).promise;
@@ -278,7 +278,7 @@ async function renderPDF(path) {
     if (lbGen === gen) {
       console.error('PDF render error:', err);
       const txt = document.querySelector('#lb-pdf-loading .lb-loading-text');
-      if (txt) txt.textContent = 'Could not load document.';
+      if (txt) txt.textContent = lang === 'de' ? 'Dokument konnte nicht geladen werden.' : 'Could not load document.';
     }
   }
 }
@@ -301,13 +301,16 @@ function openLightbox(docKey) {
 }
 
 function closeLightbox() {
-  lbGen++;   // cancel any in-progress render immediately
+  const gen = ++lbGen;   // cancel any in-progress render immediately
   document.getElementById('lb-overlay').classList.remove('open');
   // Only restore scroll if mobile menu is also closed (mirrors closeMenu logic)
   if (!document.getElementById('mob-menu').classList.contains('open')) {
     document.body.style.overflow = '';
   }
   setTimeout(() => {
+    // A newer open/close happened in the meantime — that flow owns
+    // lbPdfDoc/lb-pdf-pages now, so back off instead of tearing it down.
+    if (lbGen !== gen) return;
     if (lbPdfDoc) { lbPdfDoc.destroy(); lbPdfDoc = null; }
     document.getElementById('lb-pdf-pages').innerHTML = '';
     const loading = document.getElementById('lb-pdf-loading');
@@ -384,6 +387,9 @@ document.addEventListener('keydown', function(e) {
 
   function resize() { W = cv.width = window.innerWidth; H = cv.height = window.innerHeight; }
 
+  let isVisible = true;
+  let raf = null;
+
   function drawLayer(l, i, blend) {
     const eased  = easeInOut(blend);
     const [r0,g0,b0] = l.rgb;
@@ -447,7 +453,7 @@ document.addEventListener('keydown', function(e) {
 
 
     t++;
-    requestAnimationFrame(frame);
+    raf = isVisible ? requestAnimationFrame(frame) : null;
   }
 
   // hex to rgb lerp helper
@@ -459,6 +465,10 @@ document.addEventListener('keydown', function(e) {
 
   window.addEventListener('resize', resize, {passive:true});
   window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; }, {passive:true});
+  new IntersectionObserver(entries => {
+    isVisible = entries[0].isIntersecting;
+    if (isVisible && !raf) raf = requestAnimationFrame(frame);
+  }, { threshold: 0 }).observe(heroEl);
   resize(); frame();
 })();
 
@@ -721,21 +731,26 @@ initViz('viz1', function(cv) {
   }
 
   // ── Build-in animation ──────────────────────────────────────────────────
+  let cancelled = false;
+  let raf = null;
+
   function draw() {
+    if (cancelled) return;
     const progress = ease(Math.min(1, frame / 70));
     drawScene(progress, -1);
     frame++;
     if (frame < 120) {
-      requestAnimationFrame(draw);
+      raf = requestAnimationFrame(draw);
     } else {
       buildDone = true;
       ambientStart = performance.now();
-      requestAnimationFrame(ambient);
+      raf = requestAnimationFrame(ambient);
     }
   }
 
   // ── Ambient shimmer loop — rAF only while tab is visible ───────────────
   function ambient(now) {
+    if (cancelled) return;
     const elapsed  = now - ambientStart;
     // phase 0→1 over SHIMMER_PERIOD, then repeats
     const cyclePos  = elapsed % SHIMMER_CYCLE;
@@ -744,10 +759,11 @@ initViz('viz1', function(cv) {
       ? (cyclePos / SHIMMER_PERIOD) * (bins + SHIMMER_WIDTH * 2) - SHIMMER_WIDTH
       : -1;
     drawScene(1, shimmerPos);
-    requestAnimationFrame(ambient);
+    raf = requestAnimationFrame(ambient);
   }
 
   draw();
+  return () => { cancelled = true; if (raf) cancelAnimationFrame(raf); };
 });
 
 /* Viz 2 — Dispersive wave-packet focusing
