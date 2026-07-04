@@ -473,6 +473,60 @@ document.addEventListener('keydown', function(e) {
 })();
 
 /* ═══════════════════════════════════════════════════
+   HERO PHOTO — idle float + smoothed mouse-parallax tilt
+   Pointer target is tracked raw, but only ever chased at a fixed
+   fraction per frame (lerp) — that "lazy follow" is what reads as
+   smooth/modern rather than the photo snapping straight to the cursor.
+══════════════════════════════════════════════════════ */
+(function () {
+  const photo = document.querySelector('.hero-photo');
+  const wrap  = document.querySelector('.hero-photo-wrap');
+  if (!photo || !wrap) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const MAX_TILT  = 5;     // deg, at full cursor travel to a viewport edge
+  const MAX_SHIFT = 9;     // px
+  const EASE      = 0.07;  // per-frame approach fraction — lower = lazier
+  const BOB_AMP   = 6;     // px, idle floating amplitude
+  const BOB_SPEED = 0.012; // radians/frame
+
+  // Raw pointer target, normalised to -1..1 across the viewport
+  let targetX = 0, targetY = 0;
+  // Smoothed values actually applied to the transform
+  let curX = 0, curY = 0;
+  let t = 0, isVisible = true, raf = null;
+
+  window.addEventListener('mousemove', e => {
+    targetX = (e.clientX / window.innerWidth  - 0.5) * 2;
+    targetY = (e.clientY / window.innerHeight - 0.5) * 2;
+  }, { passive: true });
+
+  function tick() {
+    curX += (targetX - curX) * EASE;
+    curY += (targetY - curY) * EASE;
+
+    const bob = Math.sin(t * BOB_SPEED) * BOB_AMP;
+    const rx  = -curY * MAX_TILT;             // look up/down with the cursor
+    const ry  =  curX * MAX_TILT;             // look left/right with the cursor
+    const px  =  curX * MAX_SHIFT;
+    const py  =  curY * MAX_SHIFT * 0.6 + bob;
+
+    photo.style.transform =
+      `translate3d(${px.toFixed(2)}px, ${py.toFixed(2)}px, 0) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`;
+
+    t++;
+    raf = isVisible ? requestAnimationFrame(tick) : null;
+  }
+
+  new IntersectionObserver(entries => {
+    isVisible = entries[0].isIntersecting;
+    if (isVisible && !raf) raf = requestAnimationFrame(tick);
+  }, { threshold: 0 }).observe(wrap);
+
+  raf = requestAnimationFrame(tick);
+})();
+
+/* ═══════════════════════════════════════════════════
    PUBLICATION VISUALISATIONS
    — mirrors fractal's lastWidth guard (blocks iOS false resize)
    — mirrors fractal's isVisible flag (no draw when off-screen)

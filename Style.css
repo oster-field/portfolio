@@ -548,6 +548,9 @@ footer p { font-size: .7rem; color: var(--t2); }
   width: auto;
   pointer-events: none;
   user-select: none;
+  /* Gives the photo's rotateX/rotateY (idle float + mouse parallax,
+     driven from Main.js) an actual sense of depth instead of a flat skew */
+  perspective: 1000px;
   /* Bottom fades into waves, top fades into dark sky */
   -webkit-mask-image: linear-gradient(to top,
     transparent  0%,
@@ -567,6 +570,9 @@ footer p { font-size: .7rem; color: var(--t2); }
   width: auto;
   display: block;
   filter: brightness(0.9) contrast(1.05);
+  /* Transform itself is set every frame from Main.js (idle float +
+     smoothed mouse parallax) — will-change keeps it off the main paint path */
+  will-change: transform;
 }
 
 
