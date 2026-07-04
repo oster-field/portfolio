@@ -53,15 +53,11 @@ body {
 }
 #nav.scrolled .nav-logo { opacity: 1; }
 
-/* glow behind the "AT" logo, sized in em relative to the
-   logo's own font-size (1rem here, but the wrap inherits the logo's
-   computed size so it scales if .nav-logo's font-size ever changes via
-   a media query) — never a fixed px box. The sheet is a 5x7 grid of
-   51x51 frames (32 real frames; the last 3 grid cells are transparent
-   padding and are never indexed by JS), so background-size is exactly
-   500% x 700%: showing one frame at 100% of the container's own size
-   is what makes "one grid cell == one container" true regardless of
-   how large the container itself is rendered. */
+/* Glow behind the "AT" logo, sized in em so it scales with the logo's
+   own font-size at any breakpoint instead of a fixed px box. Sprite
+   sheet is a 5x7 grid of 51x51 frames (32 real frames — the last 3
+   grid cells are transparent padding, never indexed by JS), so
+   background-size 500% 700% shows exactly one frame per container. */
 .nav-logo-wrap {
   position: relative;
   display: inline-flex; align-items: center; justify-content: center;
@@ -81,15 +77,9 @@ body {
   background-repeat: no-repeat;
   background-position: 0% 0%;
   mix-blend-mode: screen;
-  /* circular shape with soft feathered edge is baked directly
-     into each frame's own alpha channel in img/sprite.png — not built
-     here via mask-image/border-radius. A CSS mask-image radial-gradient
-     was tried first but behaved inconsistently (rendered as a square in
-     practice), and stacking it with overflow:hidden + border-radius
-     double-clipped against it, making the whole disc look uniformly
-     dimmer instead of softening at the edge. Pre-baking the circle into
-     the asset itself sidesteps both problems and is also slightly
-     smaller on disk (no leftover square corners to encode). */
+  /* Circular shape with a soft feathered edge is baked into each
+     frame's own alpha channel in img/sprite.png, rather than built
+     here with mask-image/border-radius. */
 }
 #nav.scrolled .nav-logo-sprite { opacity: .38; }
 
@@ -886,6 +876,13 @@ footer p { font-size: .7rem; color: var(--t2); }
 }
 .exp-gap-link:hover { color: var(--t1); }
 
+.about-link {
+  color: var(--cyan); text-decoration: underline;
+  text-underline-offset: 2px; cursor: pointer;
+  transition: color .2s;
+}
+.about-link:hover { color: var(--t1); }
+
 /* ─────────────────────────────────────────────────────
    LIGHTBOX
 ───────────────────────────────────────────────────── */
@@ -1098,18 +1095,18 @@ footer p { font-size: .7rem; color: var(--t2); }
     opacity: 0.5;
   }
 
-  /* Fix 3 — stats: reduce cell padding so numbers don't overflow in 2-col layout */
+  /* Reduced cell padding so numbers don't overflow in the 2-col layout */
   .stat { padding: 1.85rem 1.1rem; }
 
-  /* Fix 4 — exp-card: tighter padding on small screens */
+  /* Tighter padding on small screens */
   .exp-card { padding: 1.5rem; }
   .exp-role { font-size: 1.4rem; }
 
-  /* Fix 5 — pub-info: reduce padding (card is already 1-col at ≤900px) */
+  /* Reduced padding — card is already 1-col at ≤900px */
   .pub-info { padding: 1.75rem; }
 }
 
-/* Fix 6 — lightbox on very narrow phones */
+/* Lightbox on very narrow phones */
 @media (max-width: 380px) {
   .lb-doc-title { font-size: .95rem; }
 }

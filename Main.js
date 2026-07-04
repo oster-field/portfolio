@@ -10,7 +10,7 @@ const T = {
     about_lbl:'About',
     about_q_em:'Expertise with proven impact',
     about_q_rest:' — the complete cycle, from complex math to a deployed container. More than three years of experience in research and building machine learning models.',
-    about_body:"Every model has a point where reality stops matching the assumptions. I don't trust its output until I've found that point — and the interesting part isn't building the model, it's noticing where it's been quietly wrong, proving why, and finding how to fix it.",
+    about_body:"Every model has a point where reality stops matching the assumptions. I don't trust its output until I've found that point — and the interesting part isn't building the model, it's noticing where it's been quietly wrong, proving why, and finding how to fix it. (<a href=\"javascript:void(0)\" class=\"about-link\" onclick=\"openLightbox('more_info')\">get to know me better</a>)",
     about_cv:'View CV',
     btn_diploma:'View diploma',
     btn_ref:'View letter of recommendation',
@@ -60,7 +60,7 @@ const T = {
     about_lbl:'Über mich',
     about_q_em:'Expertise mit nachgewiesener Wirkung',
     about_q_rest:' — der komplette Zyklus, von komplexer Mathematik bis zum produktiv eingesetzten Container. Über 3 Jahre Erfahrung in Forschung und Entwicklung von ML-Modellen.',
-    about_body:'Jedes Modell hat einen Punkt, an dem die Realität nicht mehr mit den Annahmen übereinstimmt. Ich vertraue seinem Ergebnis erst, wenn ich diesen Punkt gefunden habe. Der eigentlich interessante Teil ist nicht der Bau des Modells, sondern zu erkennen, wo es sich unbemerkt geirrt hat, zu beweisen, warum, und herauszufinden, wie man es behebt.',
+    about_body:'Jedes Modell hat einen Punkt, an dem die Realität nicht mehr mit den Annahmen übereinstimmt. Ich vertraue seinem Ergebnis erst, wenn ich diesen Punkt gefunden habe. Der eigentlich interessante Teil ist nicht der Bau des Modells, sondern zu erkennen, wo es sich unbemerkt geirrt hat, zu beweisen, warum, und herauszufinden, wie man es behebt. (<a href="javascript:void(0)" class="about-link" onclick="openLightbox(\'more_info\')">mehr über mich erfahren</a>)',
     about_cv:'Lebenslauf ansehen',
     btn_diploma:'Diplom ansehen',
     btn_ref:'Empfehlungsschreiben ansehen',
@@ -195,6 +195,10 @@ const LB_DOCS = {
   lieferando: {
     en: { type: 'Reference Letter', title: 'Employment Reference', path: 'doc/lieferando.pdf' },
     de: { type: 'Arbeitszeugnis',   title: 'Arbeitszeugnis',       path: 'doc/lieferando.pdf' },
+  },
+  more_info: {
+    en: { type: 'Personal Statement', title: 'Get to Know Me Better — Andrei Tregubov', path: 'doc/more_info.pdf' },
+    de: { type: 'Persönliche Notiz',  title: 'Mehr über mich — Andrei Tregubov',        path: 'doc/more_info.pdf' },
   },
 };
 
@@ -879,7 +883,7 @@ initViz('viz2', function(cv, isRestart) {
   // ── Layout constants (match at resize) ──────────────────────────────────
   const pl = 36, pr = 22, pt = 22, pb = 30;
 
-  // ── OPT 1: Offscreen canvas for static grid + axes ──────────────────────
+  // ── Offscreen canvas for static grid + axes ──────────────────────────────
   let gridCanvas = null, gridW = 0, gridH = 0;
 
   function buildGrid(W, Hc) {
@@ -995,8 +999,8 @@ initViz('viz2', function(cv, isRestart) {
     gc.setLineDash([]); gc.restore();
   }
 
-  // OPT 2b: Horizontal stroke gradient for the wave line — a gentle drift
-  // across cool tones only (blue → cyan → teal), never leaving that family.
+  // Horizontal stroke gradient for the wave line — a gentle drift across
+  // cool tones only (blue → cyan → teal), never leaving that family.
   // Built once per resize; per-frame brightness still comes from globalAlpha.
   let lineGrad = null;
 
@@ -1018,7 +1022,7 @@ initViz('viz2', function(cv, isRestart) {
   let   ghostHead   = 0;
   let   lastGhostT  = -999;
 
-  // OPT 6: phaseArrow outside draw() — defined once
+  // phaseArrow defined outside draw() — created once, not per frame
   function phaseArrow(x, y, pointRight, alpha) {
     const d = pointRight ? 1 : -1;
     cx.beginPath();
@@ -1048,7 +1052,7 @@ initViz('viz2', function(cv, isRestart) {
     const reveal  = revealDone ? 1 : Math.min(1, elapsed / REVEAL_S);
     if (!revealDone && reveal >= 1) revealDone = true;
 
-    // OPT 4: skip all physics + drawing while invisible
+    // Skip all physics + drawing while invisible
     if (reveal < 0.05) return;
 
     const W = cv.width, Hc = cv.height;
@@ -1062,7 +1066,6 @@ initViz('viz2', function(cv, isRestart) {
     }
 
     const toX = i => pl + (i / NPTS) * cW;
-    // OPT 3: toYe removed — single toY used everywhere
     const toY = v => midY - (v / ampMax) * cH * 0.46 * reveal;
 
     const cycle      = elapsed % (2 * HALF_S);
@@ -1072,7 +1075,7 @@ initViz('viz2', function(cv, isRestart) {
 
     cx.clearRect(0, 0, W, Hc);
 
-    // OPT 1: draw static grid from offscreen canvas in one call
+    // Draw static grid from offscreen canvas in one call
     cx.drawImage(gridCanvas, 0, 0);
 
     // ── Physics ──────────────────────────────────────────────────────────
@@ -1090,7 +1093,7 @@ initViz('viz2', function(cv, isRestart) {
     // ── Hot zone — narrower band, clipped ──────────────────────────────────
     if (focus > 0.35 && reveal > 0.4) {
       const peakPx   = toX(peakIdx);
-      const halfBand = 28 + 36 * focus;      // was 40+60 — tighter band
+      const halfBand = 28 + 36 * focus;      // hot-zone width, scales with focus
       const zg = cx.createLinearGradient(peakPx - halfBand, 0, peakPx + halfBand, 0);
       const za = (focus - 0.35) * 0.22 * reveal;
       zg.addColorStop(0,    'rgba(0,0,0,0)');
@@ -1105,10 +1108,9 @@ initViz('viz2', function(cv, isRestart) {
     }
 
     // ── Fill under wave — gradient re-anchored every frame to the current
-    // peak's actual pixel height (cheap: one gradient object, not per-column).
-    // Fixes the old fixed pt→midY span, which most ripples never reached,
-    // so the glow now always spans the curve's real height and stays
-    // brightest at the tallest point.
+    // peak's actual pixel height (cheap: one gradient object, not per-column),
+    // so the glow always spans the curve's real height and stays brightest
+    // at the tallest point.
     const peakY  = toY(Math.max(peakVal, ampMax * 0.12));
     const fillG  = cx.createLinearGradient(0, peakY, 0, midY);
     fillG.addColorStop(0,   'rgba(0,225,255,0.40)');
@@ -1125,7 +1127,7 @@ initViz('viz2', function(cv, isRestart) {
     cx.fill();
     cx.globalAlpha = 1;
 
-    // ── Envelope (OPT 3: toY used directly) ──────────────────────────────
+    // ── Envelope ──────────────────────────────────────────────────────────
     if (reveal > 0.2) {
       cx.setLineDash([4, 6]);
       cx.lineWidth   = 0.9;
@@ -1150,7 +1152,7 @@ initViz('viz2', function(cv, isRestart) {
     // ── Red peak glow — tight radius, clipped to chart area ──────────────
     if (focus > 0.28 && reveal > 0.5) {
       const gx   = toX(peakIdx), gy = toY(ys[peakIdx]);
-      const rad  = 28 + 22 * focus;          // was 80*focus — much tighter
+      const rad  = 28 + 22 * focus;          // glow radius, scales with focus
       const gr   = cx.createRadialGradient(gx, gy, 0, gx, gy, rad);
       const a    = (focus - 0.28) * 0.75 * reveal; // brighter at centre
       gr.addColorStop(0,    `rgba(255,100,40,${a})`);
@@ -1297,7 +1299,7 @@ setLang('en');
   obs.observe(hs);
 })();
 /* ═══════════════════════════════════════════════════
-   ABOUT — HIGH-DENSITY BATCHED CHAOTIC FRACTAL (iOS Safari Fix)
+   ABOUT — HIGH-DENSITY BATCHED CHAOTIC FRACTAL
 ══════════════════════════════════════════════════════ */
 (function () {
   const canvas = document.getElementById('fractal-canvas');
