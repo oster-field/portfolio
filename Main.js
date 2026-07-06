@@ -1307,6 +1307,7 @@ setLang('en');
   const ctx = canvas.getContext('2d');
 
   let W = 0, H = 0, clipTop = 0, clipBot = 0;
+  let textLeft = 0, textRight = 0, maskFeather = 0;
   let lastWidth = 0; // ignore false iOS resize events on unchanged width
   let seeds = [];
   let isVisible = false;
@@ -1333,6 +1334,10 @@ setLang('en');
 
     clipTop = qr.top  - sr.top;
     clipBot = qr.bottom - sr.top;
+    textLeft  = qr.left  - sr.left;
+    textRight = qr.right - sr.left;
+    // Feather relative to canvas width: ~22px at 1440px, scales on all screens
+    maskFeather = Math.max(8, Math.min(34, W * 0.0153));
 
     generateCrystals();
   }
@@ -1485,6 +1490,20 @@ setLang('en');
       }
       ctx.stroke();
     }
+
+    // ── Text-safe mask: feathered erase behind the quote's real bounding
+    // box, so the crystal never competes with the letterforms. Crystal
+    // generation/render above is unchanged — this only subtracts alpha.
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.filter = `blur(${maskFeather.toFixed(2)}px)`;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    const mPad = maskFeather * 0.6;
+    ctx.fillRect(
+      textLeft - mPad,
+      clipTop - mPad,
+      (textRight - textLeft) + mPad * 2,
+      (clipBot - clipTop) + mPad * 2
+    );
 
     ctx.restore();
   }
